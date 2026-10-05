@@ -41,9 +41,9 @@ export const ProductCostBreakdownTable: React.FC<ProductCostBreakdownTableProps>
               <th style={{ width: '22%' }}>Producto</th>
               <th style={{ width: '8%', textAlign: 'center' }}>Cant.</th>
               <th style={{ width: '10%' }}>FOB Unit.</th>
-              <th style={{ width: '11%' }}>Flete MyUS (Peso)</th>
+              <th style={{ width: '11%' }}>Courier MyUS (Mixto)</th>
               <th style={{ width: '12%' }}>Impuestos Bo (GA+IVA)</th>
-              <th style={{ width: '9%' }}>DHL ($40)</th>
+              <th style={{ width: '9%' }}>DHL ($40 s/ Valor)</th>
               <th style={{ width: '14%' }} className="highlight-th">Costo Unit. Bolivia</th>
               <th style={{ width: '14%' }} className="sale-th">Precio Venta Sug.</th>
             </tr>
@@ -60,7 +60,7 @@ export const ProductCostBreakdownTable: React.FC<ProductCostBreakdownTableProps>
                     <div className="product-item-cell">
                       <strong className="item-name">{item.item.name || 'Sin nombre'}</strong>
                       <span className="item-sub">
-                        {item.item.sellerOrStore || 'eBay'} • {item.totalWeightLbs.toFixed(1)} lbs ({item.fobWeightRatio.toFixed(1)}% peso)
+                        {item.item.sellerOrStore || 'eBay'} • {item.totalWeightLbs.toFixed(1)} lbs ({item.fobWeightRatio.toFixed(1)}% peso) • {item.fobValueRatio.toFixed(1)}% valor
                       </span>
                     </div>
                   </td>
@@ -78,7 +78,9 @@ export const ProductCostBreakdownTable: React.FC<ProductCostBreakdownTableProps>
                   <td>
                     <div className="sub-cost-cell">
                       <span className="cost-main">{formatUSD(myusPerUnit)}</span>
-                      <span className="cost-sub">Total: {formatUSD(item.proratedMyUSUSD)}</span>
+                      <span className="cost-sub">
+                        {item.proratedFreightUSD !== undefined ? `Flete: ${formatUSD(item.proratedFreightUSD / item.item.quantity)} + Seg.` : `Total: ${formatUSD(item.proratedMyUSUSD)}`}
+                      </span>
                     </div>
                   </td>
 
@@ -94,7 +96,7 @@ export const ProductCostBreakdownTable: React.FC<ProductCostBreakdownTableProps>
                   <td>
                     <div className="sub-cost-cell">
                       <span className="cost-main">{formatUSD(dhlPerUnit)}</span>
-                      <span className="cost-sub">cuota DHL</span>
+                      <span className="cost-sub">{item.fobValueRatio.toFixed(1)}% de cuota</span>
                     </div>
                   </td>
 
@@ -138,7 +140,9 @@ export const ProductCostBreakdownTable: React.FC<ProductCostBreakdownTableProps>
       <div className="breakdown-footer-info">
         <div className="footer-legend-item">
           <Scale size={14} className="text-accent" />
-          <span>El costo de flete MyUS y tasa de manejo DHL se prorratean en base al peso de cada producto.</span>
+          <span>
+            <strong>Prorrateo Mixto Inteligente:</strong> El Flete internacional se distribuye por <strong>Peso físico (lbs)</strong>, mientras que el Seguro MyUS y la Tasa fija de DHL ($40) se distribuyen equitativamente por <strong>Valor comercial FOB ($)</strong>.
+          </span>
         </div>
         <div className="footer-legend-item">
           <TrendingUp size={14} className="text-emerald" />

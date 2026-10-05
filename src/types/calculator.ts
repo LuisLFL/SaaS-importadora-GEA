@@ -55,6 +55,8 @@ export interface ProductCalculated {
   fobWeightRatio: number;
   fobValueRatio: number;
   proratedMyUSUSD: number;
+  proratedFreightUSD?: number;
+  proratedInsuranceUSD?: number;
   cifUSD: number;
   gaUSD: number;
   ivaUSD: number;

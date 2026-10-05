@@ -308,22 +308,54 @@ export function calculateSummary(
     const weightRatio = totalWeightLbs > 0 ? (itemTotalWeightLbs / totalWeightLbs) : (products.length > 0 ? 1 / products.length : 0);
     const valueRatio = totalFobUSD > 0 ? (itemFobSubtotal / totalFobUSD) : (products.length > 0 ? 1 / products.length : 0);
 
-    // Prorrateo de MyUS por peso
-    const proratedMyUSUSD = totalMyUSUSD * weightRatio;
+    // =========================================================================
+    // PRORRATEO MIXTO INTELIGENTE:
+    // =========================================================================
+    // 1. Flete internacional neto MyUS: se distribuye por PESO físico (libras en avión)
+    const proratedFreightUSD = myusShippingUSD * weightRatio;
 
-    // CIF del producto
+    // 2. Seguro MyUS ($3.50 por cada $100 FOB): se distribuye por VALOR comercial FOB
+    const proratedInsuranceUSD = myusShippingPreferencesUSD * valueRatio;
+
+    // 3. Stickers de Batería de Litio ($8.00):
+    // Se distribuye entre los productos que realmente poseen batería de litio;
+    // de lo contrario, se distribuye por valor FOB.
+    const batteryItems = products.filter(p => p.hasLithiumBattery);
+    let proratedLithiumUSD = 0;
+    if (myusLithiumStickersUSD > 0) {
+      if (batteryItems.length > 0) {
+        if (item.hasLithiumBattery) {
+          const totalBatteryFob = batteryItems.reduce((acc, p) => acc + (p.quantity * p.unitPriceUSD), 0);
+          const batteryRatio = totalBatteryFob > 0 ? (itemFobSubtotal / totalBatteryFob) : (1 / batteryItems.length);
+          proratedLithiumUSD = myusLithiumStickersUSD * batteryRatio;
+        } else {
+          proratedLithiumUSD = 0;
+        }
+      } else {
+        proratedLithiumUSD = myusLithiumStickersUSD * valueRatio;
+      }
+    }
+
+    // 4. Cargos de casillero / suite no identificada ($8.99) y consolidación: por VALOR FOB
+    const proratedAdminMyUSUSD = (myusPackageLevelUSD + myusConsolidationUSD) * valueRatio;
+
+    // Total MyUS individual justo para este producto
+    const proratedMyUSUSD = proratedFreightUSD + proratedInsuranceUSD + proratedLithiumUSD + proratedAdminMyUSUSD;
+
+    // Base Imponible CIF del producto (FOB + cuota justa de transporte y seguro)
     const itemCifUSD = itemFobSubtotal + proratedMyUSUSD;
 
-    // GA: 0% para tecnología y electrónica
+    // GA (Gravamen Arancelario): 0% exento para tecnología y electrónica
     const gaRate = (item.gaPercent || 0) / 100;
     const itemGaUSD = itemCifUSD * gaRate;
 
-    // IVA 14.94% sobre (CIF + GA)
+    // IVA (14.94% efectiva sobre CIF + GA)
     const ivaRate = (customs.ivaRate || 14.94) / 100;
     const itemIvaUSD = (itemCifUSD + itemGaUSD) * ivaRate;
 
-    // Prorrateo tasa DHL ($40) por peso
-    const proratedDhlUSD = dhlHandlingUSD * weightRatio;
+    // 5. Tasa fija de Despacho y Manejo DHL Bolivia ($40 USD):
+    // Se prorratea por VALOR FOB (trámite comercial fijo por guía completa, no flete de avión)
+    const proratedDhlUSD = dhlHandlingUSD * valueRatio;
     const proratedOtherUSD = otherFeesUSD * valueRatio;
 
     // Costo desembarcado total
@@ -356,6 +388,8 @@ export function calculateSummary(
       fobWeightRatio: weightRatio * 100,
       fobValueRatio: valueRatio * 100,
       proratedMyUSUSD,
+      proratedFreightUSD,
+      proratedInsuranceUSD,
       cifUSD: itemCifUSD,
       gaUSD: itemGaUSD,
       ivaUSD: itemIvaUSD,
