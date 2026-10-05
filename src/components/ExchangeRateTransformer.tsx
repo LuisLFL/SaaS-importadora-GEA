@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { EXCHANGE_RATE_PRESETS } from '../utils/calculatorEngine';
 import { formatBOB } from '../utils/formatters';
+import { NumericInput } from './NumericInput';
 
 interface ExchangeRateTransformerProps {
   exchangeRate: number;
@@ -19,6 +20,7 @@ export const ExchangeRateTransformer: React.FC<ExchangeRateTransformerProps> = (
   onExchangeRateChange
 }) => {
   const [quickUsd, setQuickUsd] = useState<number>(100);
+  const currentRate = exchangeRate || 12.26;
 
   return (
     <div className="transformer-card">
@@ -47,19 +49,20 @@ export const ExchangeRateTransformer: React.FC<ExchangeRateTransformerProps> = (
           <div className="mini-conv-row">
             <div className="mini-conv-input-wrap">
               <span className="input-prefix">$</span>
-              <input
-                type="number"
-                min="0"
-                step="10"
-                value={quickUsd || ''}
-                onChange={(e) => setQuickUsd(parseFloat(e.target.value) || 0)}
+              <NumericInput
+                min={0}
+                fallbackOnBlur={100}
+                allowDecimals={true}
+                value={quickUsd}
+                onValueChange={(val) => setQuickUsd(val)}
                 className="mini-conv-input"
+                placeholder="100"
               />
               <span className="input-suffix">USD</span>
             </div>
             <span className="conv-arrow">≈</span>
             <div className="mini-conv-result">
-              <strong>{formatBOB(quickUsd * exchangeRate)}</strong>
+              <strong>{formatBOB(quickUsd * currentRate)}</strong>
             </div>
           </div>
         </div>
@@ -73,18 +76,15 @@ export const ExchangeRateTransformer: React.FC<ExchangeRateTransformerProps> = (
           </label>
           <div className="rate-input-wrapper">
             <span className="rate-prefix">Bs.</span>
-            <input
-              type="number"
-              step="0.05"
-              min="1"
-              max="100"
-              value={exchangeRate || ''}
-              onChange={(e) => {
-                const val = parseFloat(e.target.value);
-                onExchangeRateChange(isNaN(val) ? 0 : val);
-              }}
+            <NumericInput
+              min={1}
+              max={100}
+              fallbackOnBlur={12.26}
+              allowDecimals={true}
+              value={exchangeRate}
+              onValueChange={(val) => onExchangeRateChange(val)}
               className="main-rate-input"
-              placeholder="Ej. 9.80"
+              placeholder="12.26"
             />
             <span className="rate-suffix">BOB / USD</span>
           </div>

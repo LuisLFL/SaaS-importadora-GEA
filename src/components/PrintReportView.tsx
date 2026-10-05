@@ -20,7 +20,7 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
         </div>
         <div className="report-meta">
           <div><strong>Fecha:</strong> {new Date().toLocaleDateString('es-BO')}</div>
-          <div><strong>Tasa de Cambio:</strong> 1 USD = {customsConfig.exchangeRate.toFixed(2)} BOB</div>
+          <div><strong>Tasa de Cambio:</strong> 1 USD = {(Number(customsConfig.exchangeRate) || 12.26).toFixed(2)} BOB</div>
           <div><strong>Modalidad:</strong> Courier MyUS ({summary.myusShippingMethodName || 'DHL Express'})</div>
         </div>
       </div>
@@ -29,25 +29,25 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
         <div className="rep-box">
           <span className="rep-label">FOB Compras eBay</span>
           <span className="rep-val">{formatUSD(summary.totalFobUSD)}</span>
-          <span className="rep-sub">{formatBOB(summary.totalFobUSD * customsConfig.exchangeRate)}</span>
+          <span className="rep-sub">{formatBOB(summary.totalFobUSD * (Number(customsConfig.exchangeRate) || 12.26))}</span>
         </div>
         <div className="rep-box">
           <span className="rep-label">Courier MyUS Total ({summary.myusShippingMethodName || 'MyUS'})</span>
           <span className="rep-val">{formatUSD(summary.totalMyUSUSD)}</span>
           <span className="rep-sub">
             {summary.myusTotalDiscountUSD > 0 ? `Desc: -${formatUSD(summary.myusTotalDiscountUSD)} | ` : ''}
-            {formatBOB(summary.totalMyUSUSD * customsConfig.exchangeRate)}
+            {formatBOB(summary.totalMyUSUSD * (Number(customsConfig.exchangeRate) || 12.26))}
           </span>
         </div>
         <div className="rep-box">
           <span className="rep-label">Aduana Bolivia (GA + IVA 14.94%)</span>
           <span className="rep-val">{formatUSD(summary.totalCustomsTaxesUSD)}</span>
-          <span className="rep-sub">{formatBOB(summary.totalCustomsTaxesUSD * customsConfig.exchangeRate)}</span>
+          <span className="rep-sub">{formatBOB(summary.totalCustomsTaxesUSD * (Number(customsConfig.exchangeRate) || 12.26))}</span>
         </div>
         <div className="rep-box">
           <span className="rep-label">Manejo DHL Bolivia</span>
           <span className="rep-val">{formatUSD(summary.dhlHandlingUSD)}</span>
-          <span className="rep-sub">{formatBOB(summary.dhlHandlingUSD * customsConfig.exchangeRate)}</span>
+          <span className="rep-sub">{formatBOB(summary.dhlHandlingUSD * (Number(customsConfig.exchangeRate) || 12.26))}</span>
         </div>
         <div className="rep-box rep-total">
           <span className="rep-label">Costo Desembarcado Total</span>

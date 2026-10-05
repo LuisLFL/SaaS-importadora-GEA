@@ -773,18 +773,42 @@ input, button, select, textarea {
   background: var(--bg-input);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
-  padding: 0 8px;
+  padding: 0 10px;
+  position: relative;
+  transition: var(--transition-fast);
+  box-sizing: border-box;
 }
 
 .input-with-currency:focus-within {
-  border-color: var(--accent-blue);
-  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+  border-color: var(--accent-blue) !important;
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25) !important;
 }
 
-.input-with-currency .table-input {
-  border: none;
-  background: transparent;
-  padding: 7px 4px;
+/* Ensure inner input has NO border, NO box-shadow, NO outline, NO extra container */
+.input-with-currency .table-input,
+.input-with-currency .table-input:focus,
+.input-with-currency input,
+.input-with-currency input:focus {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  outline: none !important;
+  padding: 7px 6px !important;
+  margin: 0 !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box;
+}
+
+/* Hide native number input spinners across all browsers */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none !important;
+  margin: 0 !important;
+}
+input[type="number"] {
+  -moz-appearance: textfield !important;
+  appearance: textfield !important;
 }
 
 .currency-symbol, .unit-symbol {
@@ -792,6 +816,8 @@ input, button, select, textarea {
   font-size: 13px;
   font-weight: 600;
   color: var(--text-muted);
+  user-select: none;
+  flex-shrink: 0;
 }
 
 .number-input, .price-input, .weight-input {
@@ -803,6 +829,7 @@ input, button, select, textarea {
   color: var(--text-muted);
   margin-top: 4px;
   font-family: var(--font-mono);
+  white-space: nowrap;
 }
 
 /* Tariff Category Selector */
@@ -997,6 +1024,125 @@ input, button, select, textarea {
 
 .empty-icon {
   color: var(--text-muted);
+}
+
+/* ==========================================================================
+   MOBILE PRODUCTS CARDS & RESPONSIVE PRODUCT LIST
+   ========================================================================== */
+.mobile-products-cards-container {
+  display: none;
+}
+
+.desktop-products-table-container {
+  display: block;
+}
+
+.mobile-product-card {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(10px);
+  transition: var(--transition-fast);
+}
+
+.mobile-product-card:focus-within {
+  border-color: rgba(56, 189, 248, 0.35);
+}
+
+.mobile-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding-bottom: 10px;
+}
+
+.mobile-card-tag {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mobile-card-badge {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent-blue);
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+}
+
+.mobile-card-fob-tag {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent-emerald);
+  font-family: var(--font-mono);
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+}
+
+.mobile-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.mobile-field-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+}
+
+.mobile-store-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.mobile-battery-chip {
+  margin-bottom: 0;
+  white-space: nowrap;
+  flex-shrink: 0;
+  padding: 8px 12px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.mobile-numbers-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.mobile-card-footer {
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.footer-summary-sub {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+
+.footer-summary-sub strong {
+  color: #fff;
 }
 
 /* ==========================================================================
@@ -2894,6 +3040,153 @@ input, button, select, textarea {
   padding: 3px 10px;
   border-radius: var(--radius-sm);
   border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+/* ==========================================================================
+   RESPONSIVE LAYOUT & MOBILE BREAKPOINTS (<= 768px, <= 480px)
+   ========================================================================== */
+@media (max-width: 900px) {
+  .app-container {
+    padding: 16px 12px;
+  }
+  .navbar-content {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Prevent auto-zooming on input focus in iOS Safari */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+
+  .table-input, .main-rate-input, .table-select {
+    font-size: 16px !important;
+  }
+
+  /* Switch from squeezed desktop table to native mobile cards */
+  .desktop-products-table-container {
+    display: none !important;
+  }
+
+  .mobile-products-cards-container {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 14px !important;
+  }
+
+  /* Two column layout converts to single column stack */
+  .two-column-split {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+
+  /* Section cards padding on small devices */
+  .section-card {
+    padding: 16px 12px !important;
+    border-radius: var(--radius-md) !important;
+  }
+
+  .section-card-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+
+  .section-header-actions {
+    width: 100% !important;
+  }
+
+  .section-header-actions .primary-btn {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  /* Products summary strip */
+  .products-summary-strip {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+  }
+
+  .summary-stat-chip {
+    width: 100% !important;
+    justify-content: space-between !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Carrier options and discounts */
+  .discounts-options-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .carrier-options-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  .customs-cards-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  /* Transformer adjustments */
+  .transformer-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+
+  .mini-converter-box {
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .mini-conv-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+  }
+
+  .conv-arrow {
+    display: none !important;
+  }
+
+  .mini-conv-result {
+    text-align: center !important;
+  }
+
+  .presets-list {
+    flex-wrap: wrap !important;
+  }
+
+  .preset-chip {
+    flex: 1 1 calc(50% - 6px) !important;
+    justify-content: center !important;
+  }
+
+  /* Executive summary and breakdown */
+  .summary-cards-row {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .mobile-numbers-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .mobile-store-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .summary-cards-row {
+    grid-template-columns: 1fr !important;
+  }
 }
 
 /* ==========================================================================

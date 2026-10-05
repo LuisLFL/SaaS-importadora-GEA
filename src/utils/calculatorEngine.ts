@@ -230,10 +230,10 @@ export function calculateSummary(
   myus: MyUSConfig,
   customs: BoliviaCustomsConfig
 ): CalculationSummary {
-  const totalItemsCount = products.reduce((acc, p) => acc + (p.quantity || 0), 0);
+  const totalItemsCount = products.reduce((acc, p) => acc + (Number(p.quantity) || 0), 0);
   const totalPackagesCount = products.reduce((acc, p) => acc + (p.packageCount || 1), 0);
-  const totalFobUSD = products.reduce((acc, p) => acc + (p.quantity * p.unitPriceUSD || 0), 0);
-  const totalWeightLbs = products.reduce((acc, p) => acc + (p.quantity * p.unitWeightLbs || 0), 0);
+  const totalFobUSD = products.reduce((acc, p) => acc + ((Number(p.quantity) || 0) * (Number(p.unitPriceUSD) || 0)), 0);
+  const totalWeightLbs = products.reduce((acc, p) => acc + ((Number(p.quantity) || 0) * (Number(p.unitWeightLbs) || 0)), 0);
   // Redondeo al entero superior para facturación MyUS
   const billableWeightLbs = totalWeightLbs > 0 ? Math.max(1, Math.ceil(totalWeightLbs)) : 0;
   const totalWeightKg = totalWeightLbs * LBS_TO_KG;
@@ -246,17 +246,17 @@ export function calculateSummary(
   if (myus.autoCalculateShipping) {
     myusBaseShippingUSD = calculateCarrierRate(currentMethod, billableWeightLbs);
   } else {
-    myusBaseShippingUSD = Math.max(0, myus.shippingChargeUSD || 0);
+    myusBaseShippingUSD = Math.max(0, Number(myus.shippingChargeUSD) || 0);
   }
 
   // 1.1 Descuentos aplicables al Flete MyUS:
   // a) Descuento Porcentual (% sobre flete base)
-  const discountPercent = Math.min(100, Math.max(0, myus.discountPercent || 0));
+  const discountPercent = Math.min(100, Math.max(0, Number(myus.discountPercent) || 0));
   const myusDiscountPercentUSD = parseFloat((myusBaseShippingUSD * (discountPercent / 100)).toFixed(2));
   const subtotalAfterPercent = Math.max(0, myusBaseShippingUSD - myusDiscountPercentUSD);
 
   // b) Descuento en Crédito USD (saldo/crédito en cuenta MyUS)
-  const rawCreditUSD = Math.max(0, myus.discountCreditUSD || 0);
+  const rawCreditUSD = Math.max(0, Number(myus.discountCreditUSD) || 0);
   const myusDiscountCreditUSD = parseFloat(Math.min(subtotalAfterPercent, rawCreditUSD).toFixed(2));
 
   // c) Sumatoria de descuentos y Flete Neto resultante
@@ -266,22 +266,22 @@ export function calculateSummary(
   // 2. Shipping Preferences (Seguro MyUS: $3.50 por cada $100 USD de producto)
   let myusShippingPreferencesUSD = 0;
   if (myus.useCustomShippingPreferences) {
-    myusShippingPreferencesUSD = Math.max(0, myus.customShippingPreferencesUSD || 0);
+    myusShippingPreferencesUSD = Math.max(0, Number(myus.customShippingPreferencesUSD) || 0);
   } else {
     // Cálculo oficial: $3.50 por cada tramo de $100 FOB
     const tiers = totalFobUSD > 0 ? Math.ceil(totalFobUSD / 100) : 1;
-    myusShippingPreferencesUSD = parseFloat((tiers * (myus.insurancePer100RateUSD || 3.50)).toFixed(2));
+    myusShippingPreferencesUSD = parseFloat((tiers * (Number(myus.insurancePer100RateUSD) || 3.50)).toFixed(2));
   }
 
   // 3. Package Level Charges ($8.99 por suite no identificada / búsqueda extra de paquete)
-  const myusPackageLevelUSD = myus.hasPackageLevelCharges ? (myus.packageLevelChargesUSD || 8.99) : 0;
+  const myusPackageLevelUSD = myus.hasPackageLevelCharges ? (Number(myus.packageLevelChargesUSD) || 8.99) : 0;
 
   // 4. Lithium-ion Stickers ($8.00 único si contiene 1 o más objetos con batería de litio)
   const containsLithium = myus.hasLithiumSticker || products.some(p => p.hasLithiumBattery);
-  const myusLithiumStickersUSD = containsLithium ? (myus.lithiumStickerUSD || 8.00) : 0;
+  const myusLithiumStickersUSD = containsLithium ? (Number(myus.lithiumStickerUSD) || 8.00) : 0;
 
   // 5. Consolidación ($0 para Premium, $3 para Free members si consolidan)
-  const myusConsolidationUSD = myus.membershipType === 'premium' ? 0.00 : (totalPackagesCount > 1 ? 3.00 : 0.00);
+  const myusConsolidationUSD = myus.membershipType === 'premium' ? 0.00 : (totalPackagesCount > 1 ? (Number(myus.consolidationFeeUSD) || 3.00) : 0.00);
 
   // Total Facturado por MyUS (entra en la base CIF para el IVA de Bolivia)
   const totalMyUSUSD = myusShippingUSD + 
@@ -296,13 +296,16 @@ export function calculateSummary(
   // Prorrateo individual por producto
   let totalGaUSD = 0;
   let totalIvaUSD = 0;
-  const dhlHandlingUSD = Math.max(0, customs.dhlHandlingFeeUSD ?? 40);
-  const otherFeesUSD = (customs.otherCustomsFeesBOB || 0) / (customs.exchangeRate || 1);
+  const dhlHandlingUSD = Math.max(0, Number(customs.dhlHandlingFeeUSD) || 0);
+  const customsRate = Number(customs.exchangeRate) || 12.26;
+  const otherFeesUSD = (Number(customs.otherCustomsFeesBOB) || 0) / customsRate;
 
   const calculatedProducts: ProductCalculated[] = products.map((item) => {
-    const itemTotalQty = item.quantity || 1;
-    const itemFobSubtotal = itemTotalQty * (item.unitPriceUSD || 0);
-    const itemTotalWeightLbs = itemTotalQty * (item.unitWeightLbs || 0);
+    const itemTotalQty = Math.max(1, Number(item.quantity) || 1);
+    const itemUnitPrice = Math.max(0, Number(item.unitPriceUSD) || 0);
+    const itemUnitWeight = Math.max(0, Number(item.unitWeightLbs) || 0);
+    const itemFobSubtotal = itemTotalQty * itemUnitPrice;
+    const itemTotalWeightLbs = itemTotalQty * itemUnitWeight;
     const itemTotalWeightKg = itemTotalWeightLbs * LBS_TO_KG;
 
     const weightRatio = totalWeightLbs > 0 ? (itemTotalWeightLbs / totalWeightLbs) : (products.length > 0 ? 1 / products.length : 0);
@@ -325,7 +328,7 @@ export function calculateSummary(
     if (myusLithiumStickersUSD > 0) {
       if (batteryItems.length > 0) {
         if (item.hasLithiumBattery) {
-          const totalBatteryFob = batteryItems.reduce((acc, p) => acc + (p.quantity * p.unitPriceUSD), 0);
+          const totalBatteryFob = batteryItems.reduce((acc, p) => acc + ((Number(p.quantity) || 1) * (Number(p.unitPriceUSD) || 0)), 0);
           const batteryRatio = totalBatteryFob > 0 ? (itemFobSubtotal / totalBatteryFob) : (1 / batteryItems.length);
           proratedLithiumUSD = myusLithiumStickersUSD * batteryRatio;
         } else {
@@ -346,7 +349,7 @@ export function calculateSummary(
     const itemCifUSD = itemFobSubtotal + proratedMyUSUSD;
 
     // GA (Gravamen Arancelario): 0% exento para tecnología y electrónica
-    const gaRate = (item.gaPercent || 0) / 100;
+    const gaRate = (Math.max(0, Number(item.gaPercent) || 0)) / 100;
     const itemGaUSD = itemCifUSD * gaRate;
 
     // IVA (14.94% efectiva sobre CIF + GA)
@@ -368,7 +371,7 @@ export function calculateSummary(
     const unitLandedCostBOB = unitLandedCostUSD * rate;
 
     // Margen y precio de venta
-    const marginMultiplier = 1 + ((item.targetMarginPercent || 25) / 100);
+    const marginMultiplier = 1 + ((Math.max(0, Number(item.targetMarginPercent) || 0)) / 100);
     const suggestedSalePriceUSD = unitLandedCostUSD * marginMultiplier;
     const suggestedSalePriceBOB = suggestedSalePriceUSD * rate;
 
@@ -409,7 +412,7 @@ export function calculateSummary(
 
   const totalCustomsTaxesUSD = totalGaUSD + totalIvaUSD;
   const totalLandedCostUSD = totalFobUSD + totalMyUSUSD + totalCustomsTaxesUSD + dhlHandlingUSD + otherFeesUSD;
-  const rate = customs.exchangeRate || 12.26;
+  const rate = Number(customs.exchangeRate) || 12.26;
   const totalLandedCostBOB = totalLandedCostUSD * rate;
 
   const logisticsCostUSD = totalMyUSUSD + dhlHandlingUSD;
@@ -419,7 +422,7 @@ export function calculateSummary(
   const costPerLbUSD = totalWeightLbs > 0 ? (totalLandedCostUSD / totalWeightLbs) : 0;
   const costPerKgUSD = totalWeightKg > 0 ? (totalLandedCostUSD / totalWeightKg) : 0;
 
-  const totalProjectedRevenueUSD = calculatedProducts.reduce((acc, p) => acc + (p.suggestedSalePriceUSD * p.item.quantity), 0);
+  const totalProjectedRevenueUSD = calculatedProducts.reduce((acc, p) => acc + (p.suggestedSalePriceUSD * (Number(p.item.quantity) || 0)), 0);
   const totalProjectedRevenueBOB = totalProjectedRevenueUSD * rate;
   const totalProjectedProfitUSD = calculatedProducts.reduce((acc, p) => acc + p.totalProfitUSD, 0);
   const totalProjectedProfitBOB = totalProjectedProfitUSD * rate;

@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import type { BoliviaCustomsConfig, CalculationSummary } from '../types/calculator';
 import { formatUSD, formatBOB } from '../utils/formatters';
+import { NumericInput } from './NumericInput';
 
 interface BoliviaCustomsSectionProps {
   customsConfig: BoliviaCustomsConfig;
@@ -132,13 +133,14 @@ export const BoliviaCustomsSection: React.FC<BoliviaCustomsSectionProps> = ({
           <div className="dhl-input-row">
             <div className="input-with-currency large-input">
               <span className="currency-symbol">$</span>
-              <input
-                type="number"
-                step="1"
-                min="0"
+              <NumericInput
+                min={0}
+                fallbackOnBlur={0}
+                allowDecimals={true}
                 value={customsConfig.dhlHandlingFeeUSD}
-                onChange={(e) => onUpdateCustoms({ dhlHandlingFeeUSD: Math.max(0, parseFloat(e.target.value) || 0) })}
+                onValueChange={(val) => onUpdateCustoms({ dhlHandlingFeeUSD: val })}
                 className="table-input"
+                placeholder="40"
               />
               <span className="input-unit">USD</span>
             </div>

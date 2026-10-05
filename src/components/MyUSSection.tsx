@@ -17,6 +17,7 @@ import {
 import type { MyUSConfig, MyUSShippingMethod } from '../types/calculator';
 import { MYUS_SHIPPING_OPTIONS, getAllCarrierRates } from '../utils/calculatorEngine';
 import { formatUSD, formatBOB } from '../utils/formatters';
+import { NumericInput } from './NumericInput';
 
 interface MyUSSectionProps {
   myusConfig: MyUSConfig;
@@ -316,16 +317,13 @@ export const MyUSSection: React.FC<MyUSSectionProps> = ({
             <div className="discount-input-row">
               <label className="discount-input-label">Porcentaje personalizado:</label>
               <div className="input-with-currency small-pill-input">
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="1"
-                  value={discountPercent || ''}
-                  onChange={(e) => {
-                    const val = Math.min(100, Math.max(0, parseFloat(e.target.value) || 0));
-                    onUpdateMyUS({ discountPercent: val });
-                  }}
+                <NumericInput
+                  min={0}
+                  max={100}
+                  fallbackOnBlur={0}
+                  allowDecimals={true}
+                  value={discountPercent}
+                  onValueChange={(val) => onUpdateMyUS({ discountPercent: val })}
                   placeholder="0"
                   className="table-input text-right"
                 />
@@ -372,15 +370,12 @@ export const MyUSSection: React.FC<MyUSSectionProps> = ({
               <label className="discount-input-label">Monto de crédito:</label>
               <div className="input-with-currency small-pill-input">
                 <span className="currency-symbol">$</span>
-                <input
-                  type="number"
-                  min="0"
-                  step="1.00"
-                  value={discountCreditRaw || ''}
-                  onChange={(e) => {
-                    const val = Math.max(0, parseFloat(e.target.value) || 0);
-                    onUpdateMyUS({ discountCreditUSD: val });
-                  }}
+                <NumericInput
+                  min={0}
+                  fallbackOnBlur={0}
+                  allowDecimals={true}
+                  value={discountCreditRaw}
+                  onValueChange={(val) => onUpdateMyUS({ discountCreditUSD: val })}
                   placeholder="0.00"
                   className="table-input price-input text-right"
                 />
@@ -448,18 +443,19 @@ export const MyUSSection: React.FC<MyUSSectionProps> = ({
             <div className="charge-right">
               <div className="input-with-currency small-pill-input">
                 <span className="currency-symbol">$</span>
-                <input
-                  type="number"
-                  step="0.10"
-                  min="0"
-                  value={myusConfig.autoCalculateShipping ? baseShippingCharge : (myusConfig.shippingChargeUSD || '')}
-                  onChange={(e) => {
+                <NumericInput
+                  min={0}
+                  fallbackOnBlur={0}
+                  allowDecimals={true}
+                  value={myusConfig.autoCalculateShipping ? baseShippingCharge : (myusConfig.shippingChargeUSD || 0)}
+                  onValueChange={(val) => {
                     onUpdateMyUS({ 
                       autoCalculateShipping: false, 
-                      shippingChargeUSD: Math.max(0, parseFloat(e.target.value) || 0) 
+                      shippingChargeUSD: val 
                     });
                   }}
                   className="table-input price-input text-right"
+                  placeholder="0.00"
                 />
                 <span className="unit-symbol">USD</span>
               </div>
@@ -540,18 +536,19 @@ export const MyUSSection: React.FC<MyUSSectionProps> = ({
             <div className="charge-right">
               <div className="input-with-currency small-pill-input">
                 <span className="currency-symbol">$</span>
-                <input
-                  type="number"
-                  step="0.50"
-                  min="0"
-                  value={myusConfig.useCustomShippingPreferences ? myusConfig.customShippingPreferencesUSD : activePreferencesCharge}
-                  onChange={(e) => {
+                <NumericInput
+                  min={0}
+                  fallbackOnBlur={0}
+                  allowDecimals={true}
+                  value={myusConfig.useCustomShippingPreferences ? (myusConfig.customShippingPreferencesUSD || 0) : activePreferencesCharge}
+                  onValueChange={(val) => {
                     onUpdateMyUS({ 
                       useCustomShippingPreferences: true, 
-                      customShippingPreferencesUSD: Math.max(0, parseFloat(e.target.value) || 0) 
+                      customShippingPreferencesUSD: val 
                     });
                   }}
                   className="table-input price-input text-right"
+                  placeholder="0.00"
                 />
                 <span className="unit-symbol">USD</span>
               </div>
