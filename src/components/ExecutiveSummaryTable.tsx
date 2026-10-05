@@ -132,14 +132,44 @@ export const ExecutiveSummaryTable: React.FC<ExecutiveSummaryTableProps> = ({
             <tr className="sub-detail-row">
               <td className="item-name-col">
                 <span className="bullet-dot">•</span>
-                <span>Shipping Charges (Flete Internacional)</span>
+                <span>Flete Internacional ({summary.myusShippingMethodName || 'MyUS'})</span>
               </td>
               <td className="detail-desc-col">
-                DHL Express Smallbox ({summary.totalWeightLbs.toFixed(2)} lbs de peso)
+                {summary.myusTotalDiscountUSD > 0
+                  ? `Base: ${formatUSD(summary.myusBaseShippingUSD)} (${summary.billableWeightLbs || Math.ceil(summary.totalWeightLbs)} lbs facturables) • Ahorro: -${formatUSD(summary.myusTotalDiscountUSD)}`
+                  : `${summary.billableWeightLbs || Math.ceil(summary.totalWeightLbs)} lbs facturables${summary.totalWeightLbs !== (summary.billableWeightLbs || Math.ceil(summary.totalWeightLbs)) ? ` (real: ${summary.totalWeightLbs.toFixed(2)} lbs)` : ''}`}
               </td>
               <td className="text-right number-col">{formatUSD(summary.myusShippingUSD)}</td>
               <td className="text-right number-col sub-bob-col">{formatBOB(summary.myusShippingUSD * exchangeRate)}</td>
             </tr>
+
+            {summary.myusDiscountPercentUSD > 0 && (
+              <tr className="sub-detail-row discount-sub-detail-row">
+                <td className="item-name-col">
+                  <span className="bullet-dot text-emerald">↳</span>
+                  <span className="text-emerald">Descuento Porcentual de Envío</span>
+                </td>
+                <td className="detail-desc-col text-emerald">
+                  Deducción por convenio / promoción en flete
+                </td>
+                <td className="text-right number-col text-emerald">-{formatUSD(summary.myusDiscountPercentUSD)}</td>
+                <td className="text-right number-col sub-bob-col text-emerald">-{formatBOB(summary.myusDiscountPercentUSD * exchangeRate)}</td>
+              </tr>
+            )}
+
+            {summary.myusDiscountCreditUSD > 0 && (
+              <tr className="sub-detail-row discount-sub-detail-row">
+                <td className="item-name-col">
+                  <span className="bullet-dot text-emerald">↳</span>
+                  <span className="text-emerald">Descuento en Crédito USD (Cuenta)</span>
+                </td>
+                <td className="detail-desc-col text-emerald">
+                  Saldo a favor en cuenta MyUS aplicado al envío
+                </td>
+                <td className="text-right number-col text-emerald">-{formatUSD(summary.myusDiscountCreditUSD)}</td>
+                <td className="text-right number-col sub-bob-col text-emerald">-{formatBOB(summary.myusDiscountCreditUSD * exchangeRate)}</td>
+              </tr>
+            )}
 
             <tr className="sub-detail-row">
               <td className="item-name-col">

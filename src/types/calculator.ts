@@ -12,10 +12,17 @@ export interface ProductItem {
   hasLithiumBattery?: boolean; // Si contiene batería de litio (activa sticker de $8)
 }
 
+export type MyUSShippingMethod = 'dhl_smallbox' | 'dhl_express' | 'budget_economy' | 'ups_expedited';
+
 export interface MyUSConfig {
   membershipType: 'premium' | 'free'; // Premium ($0 consolidación) vs Free ($3.00)
+  shippingMethod: MyUSShippingMethod; // 'dhl_smallbox' | 'dhl_express' | 'budget_economy' | 'ups_expedited'
   autoCalculateShipping: boolean; // Extrapolación de TruePrice™
-  shippingChargeUSD: number; // Tarifa de flete por peso
+  shippingChargeUSD: number; // Tarifa de flete base por peso (o manual)
+  
+  // Descuentos en flete MyUS
+  discountPercent: number; // Descuento porcentual (ej. 15% o 20% OFF de membresía/tarjeta/cupón)
+  discountCreditUSD: number; // Descuento en crédito fijo USD (ej. $10.00 USD de saldo en cuenta)
   
   // Shipping Preferences: Seguro ($3.50 por cada $100 de producto)
   insurancePer100RateUSD: number; // $3.50
@@ -69,10 +76,17 @@ export interface CalculationSummary {
   totalPackagesCount: number;
   totalFobUSD: number;
   totalWeightLbs: number;
+  billableWeightLbs: number; // Peso facturable redondeado al próximo entero superior
   totalWeightKg: number;
   
   // Desglose idéntico a Ship Request Summary de MyUS
-  myusShippingUSD: number;
+  myusShippingMethod: MyUSShippingMethod;
+  myusShippingMethodName: string;
+  myusBaseShippingUSD: number; // Flete antes de descuentos
+  myusDiscountPercentUSD: number; // Descuento porcentual en USD
+  myusDiscountCreditUSD: number; // Descuento en crédito en USD
+  myusTotalDiscountUSD: number; // Total descuentos aplicados
+  myusShippingUSD: number; // Flete neto tras descuentos
   myusShippingPreferencesUSD: number; // Seguro $3.50 / $100
   myusPackageLevelUSD: number; // $8.99 por suite/esfuerzo extra
   myusLithiumStickersUSD: number; // $8.00 sticker litio

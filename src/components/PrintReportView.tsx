@@ -21,7 +21,7 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
         <div className="report-meta">
           <div><strong>Fecha:</strong> {new Date().toLocaleDateString('es-BO')}</div>
           <div><strong>Tasa de Cambio:</strong> 1 USD = {customsConfig.exchangeRate.toFixed(2)} BOB</div>
-          <div><strong>Modalidad:</strong> Courier Aéreo / Forwarder MyUS</div>
+          <div><strong>Modalidad:</strong> Courier MyUS ({summary.myusShippingMethodName || 'DHL Express'})</div>
         </div>
       </div>
 
@@ -32,9 +32,12 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
           <span className="rep-sub">{formatBOB(summary.totalFobUSD * customsConfig.exchangeRate)}</span>
         </div>
         <div className="rep-box">
-          <span className="rep-label">Courier MyUS Total</span>
+          <span className="rep-label">Courier MyUS Total ({summary.myusShippingMethodName || 'MyUS'})</span>
           <span className="rep-val">{formatUSD(summary.totalMyUSUSD)}</span>
-          <span className="rep-sub">{formatBOB(summary.totalMyUSUSD * customsConfig.exchangeRate)}</span>
+          <span className="rep-sub">
+            {summary.myusTotalDiscountUSD > 0 ? `Desc: -${formatUSD(summary.myusTotalDiscountUSD)} | ` : ''}
+            {formatBOB(summary.totalMyUSUSD * customsConfig.exchangeRate)}
+          </span>
         </div>
         <div className="rep-box">
           <span className="rep-label">Aduana Bolivia (GA + IVA 14.94%)</span>

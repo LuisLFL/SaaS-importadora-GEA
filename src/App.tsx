@@ -258,6 +258,7 @@ export const App: React.FC = () => {
             totalWeightLbs={summary.totalWeightLbs}
             totalFobUSD={summary.totalFobUSD}
             exchangeRate={customsConfig.exchangeRate}
+            totalPackagesCount={summary.totalPackagesCount}
             onUpdateMyUS={handleUpdateMyUS}
           />
 
