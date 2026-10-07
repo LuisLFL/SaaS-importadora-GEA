@@ -2539,6 +2539,311 @@ input[type="number"] {
   gap: 6px;
 }
 
+/* Header and title additions for breakdown table */
+.section-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.section-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.section-status-chip.active {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.15);
+}
+
+.section-status-chip.ready {
+  background: rgba(56, 189, 248, 0.12);
+  color: var(--accent-blue);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+}
+
+/* TH cell header tags */
+.th-cell-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.th-badge-fixed {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(148, 163, 184, 0.15);
+  color: #94a3b8;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.th-badge-editable {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.th-badge-locked {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+/* Courier locked cell */
+.courier-locked-cell {
+  position: relative;
+}
+
+.cost-main-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.fixed-weight-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 9px;
+  color: #94a3b8;
+  background: rgba(148, 163, 184, 0.12);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+/* Editable Cost Cell */
+.editable-table-cell {
+  position: relative;
+  transition: all var(--transition-fast);
+}
+
+.cost-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  padding: 2px 4px;
+  transition: all var(--transition-fast);
+  max-width: 115px;
+}
+
+.cost-input-wrapper:focus-within {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+  background: rgba(15, 23, 42, 0.95);
+}
+
+.editable-table-cell.is-custom .cost-input-wrapper {
+  border-color: rgba(245, 158, 11, 0.6);
+  background: rgba(245, 158, 11, 0.08);
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.15);
+}
+
+.editable-table-cell.is-redistributed .cost-input-wrapper {
+  border-color: rgba(56, 189, 248, 0.35);
+  background: rgba(56, 189, 248, 0.04);
+}
+
+.cost-currency-prefix {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  user-select: none;
+}
+
+.table-cost-input {
+  width: 100%;
+  min-width: 48px;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 1px 0;
+}
+
+.table-cost-input.custom-input {
+  color: #fbbf24;
+}
+
+.btn-cell-revert {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  padding: 2px;
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  opacity: 0.7;
+}
+
+.btn-cell-revert:hover {
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.15);
+  opacity: 1;
+}
+
+.cost-sub-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.badge-pill-manual {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  padding: 1px 4px;
+  border-radius: 3px;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.badge-pill-auto {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+/* Row highlights */
+.row-customized {
+  background: rgba(245, 158, 11, 0.03) !important;
+}
+
+.highlight-custom-landed {
+  box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.25);
+}
+
+/* Actions Bar beneath table */
+.breakdown-actions-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  margin-top: 14px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.actions-bar-info {
+  flex: 1;
+  min-width: 280px;
+}
+
+.status-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.status-chip.active {
+  color: #fde68a;
+}
+
+.status-chip.active strong {
+  color: #fbbf24;
+}
+
+.status-chip.ready {
+  color: var(--text-secondary);
+}
+
+.status-chip.ready strong {
+  color: #38bdf8;
+}
+
+.status-chip.single-item {
+  color: var(--text-muted);
+}
+
+.btn-reset-proration {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.btn-reset-proration.is-active {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(239, 68, 68, 0.2));
+  color: #fef3c7;
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.2);
+}
+
+.btn-reset-proration.is-active:hover {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.35), rgba(239, 68, 68, 0.35));
+  border-color: #fbbf24;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(245, 158, 11, 0.3);
+}
+
+.btn-reset-proration.is-disabled {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 /* ==========================================================================
    MODAL DIALOG
    ========================================================================== */

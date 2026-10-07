@@ -14,7 +14,8 @@ import type {
   ProductItem, 
   MyUSConfig, 
   BoliviaCustomsConfig, 
-  SavedQuotation 
+  SavedQuotation,
+  CustomProrationOverrides
 } from './types/calculator';
 import { 
   calculateSummary, 
@@ -63,6 +64,19 @@ export const App: React.FC = () => {
     return DEFAULT_BOLIVIA_CONFIG;
   });
 
+  // Estado de Prorrateo Personalizado (Redistribución manual de Impuestos y DHL)
+  const [customProration, setCustomProration] = useState<CustomProrationOverrides>(() => {
+    const saved = localStorage.getItem('gea_current_proration_v3');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return { manualUnitTaxes: {}, manualUnitDhl: {} };
+  });
+
   // Estado de UI
   const [currencyMode, setCurrencyMode] = useState<'both' | 'usd' | 'bob'>('both');
   const [isSavedModalOpen, setIsSavedModalOpen] = useState(false);
@@ -83,17 +97,59 @@ export const App: React.FC = () => {
     localStorage.setItem('gea_current_products_v3', JSON.stringify(products));
     localStorage.setItem('gea_current_myus_v3', JSON.stringify(myusConfig));
     localStorage.setItem('gea_current_customs_v3', JSON.stringify(customsConfig));
-  }, [products, myusConfig, customsConfig]);
+    localStorage.setItem('gea_current_proration_v3', JSON.stringify(customProration));
+  }, [products, myusConfig, customsConfig, customProration]);
 
   // Persistencia de cotizaciones guardadas
   useEffect(() => {
     localStorage.setItem('gea_saved_quotations_list', JSON.stringify(savedQuotes));
   }, [savedQuotes]);
 
-  // Cálculo reactivo en tiempo real de todo el modelo financiero
+  // Cálculo reactivo en tiempo real de todo el modelo financiero con soporte de redistribución
   const summary = useMemo(() => {
-    return calculateSummary(products, myusConfig, customsConfig);
-  }, [products, myusConfig, customsConfig]);
+    return calculateSummary(products, myusConfig, customsConfig, customProration);
+  }, [products, myusConfig, customsConfig, customProration]);
+
+  // Manejo de redistribución de costos
+  const handleUpdateTaxOverride = (productId: string, unitVal: number) => {
+    setCustomProration(prev => ({
+      ...prev,
+      manualUnitTaxes: {
+        ...prev.manualUnitTaxes,
+        [productId]: unitVal
+      }
+    }));
+  };
+
+  const handleUpdateDhlOverride = (productId: string, unitVal: number) => {
+    setCustomProration(prev => ({
+      ...prev,
+      manualUnitDhl: {
+        ...prev.manualUnitDhl,
+        [productId]: unitVal
+      }
+    }));
+  };
+
+  const handleClearTaxOverride = (productId: string) => {
+    setCustomProration(prev => {
+      const copy = { ...prev.manualUnitTaxes };
+      delete copy[productId];
+      return { ...prev, manualUnitTaxes: copy };
+    });
+  };
+
+  const handleClearDhlOverride = (productId: string) => {
+    setCustomProration(prev => {
+      const copy = { ...prev.manualUnitDhl };
+      delete copy[productId];
+      return { ...prev, manualUnitDhl: copy };
+    });
+  };
+
+  const handleResetAllOverrides = () => {
+    setCustomProration({ manualUnitTaxes: {}, manualUnitDhl: {} });
+  };
 
   // Manejo de productos
   const handleAddProduct = () => {
@@ -119,6 +175,13 @@ export const App: React.FC = () => {
 
   const handleRemoveProduct = (id: string) => {
     setProducts(products.filter(p => p.id !== id));
+    setCustomProration(prev => {
+      const taxes = { ...prev.manualUnitTaxes };
+      const dhl = { ...prev.manualUnitDhl };
+      delete taxes[id];
+      delete dhl[id];
+      return { manualUnitTaxes: taxes, manualUnitDhl: dhl };
+    });
   };
 
   const handleDuplicateProduct = (id: string) => {
@@ -151,6 +214,7 @@ export const App: React.FC = () => {
     setProducts(SAMPLE_PRODUCTS);
     setMyusConfig(DEFAULT_MYUS_CONFIG);
     setCustomsConfig(DEFAULT_BOLIVIA_CONFIG);
+    handleResetAllOverrides();
   };
 
   const handleReset = () => {
@@ -162,6 +226,7 @@ export const App: React.FC = () => {
         packageLevelChargesUSD: 0,
         consolidationFeeUSD: 0
       });
+      handleResetAllOverrides();
     }
   };
 
@@ -185,6 +250,7 @@ export const App: React.FC = () => {
       products: [...products],
       myusConfig: { ...myusConfig },
       customsConfig: { ...customsConfig },
+      customProration: { ...customProration },
       totalLandedUSD: summary.totalLandedCostUSD,
       totalLandedBOB: summary.totalLandedCostBOB
     };
@@ -203,6 +269,7 @@ export const App: React.FC = () => {
     setProducts(quote.products);
     setMyusConfig(quote.myusConfig);
     setCustomsConfig(quote.customsConfig);
+    setCustomProration(quote.customProration || { manualUnitTaxes: {}, manualUnitDhl: {} });
   };
 
   const handlePrint = () => {
@@ -290,6 +357,14 @@ export const App: React.FC = () => {
           products={summary.products}
           exchangeRate={customsConfig.exchangeRate}
           currencyMode={currencyMode}
+          customProration={customProration}
+          onUpdateTaxOverride={handleUpdateTaxOverride}
+          onUpdateDhlOverride={handleUpdateDhlOverride}
+          onClearTaxOverride={handleClearTaxOverride}
+          onClearDhlOverride={handleClearDhlOverride}
+          onResetAllOverrides={handleResetAllOverrides}
+          totalCustomsTaxesUSD={summary.totalCustomsTaxesUSD}
+          totalDhlHandlingUSD={summary.dhlHandlingUSD}
         />
       </main>
 

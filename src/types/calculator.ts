@@ -71,6 +71,13 @@ export interface ProductCalculated {
   unitProfitBOB: number;
   totalProfitUSD: number;
   totalProfitBOB: number;
+  isTaxCustom?: boolean;
+  isDhlCustom?: boolean;
+}
+
+export interface CustomProrationOverrides {
+  manualUnitTaxes: Record<string, number>;
+  manualUnitDhl: Record<string, number>;
 }
 
 export interface CalculationSummary {
@@ -124,6 +131,7 @@ export interface CalculationSummary {
   totalProjectedProfitBOB: number;
   overallRoiPercent: number;
   
+  hasCustomProration?: boolean;
   products: ProductCalculated[];
 }
 
@@ -134,6 +142,7 @@ export interface SavedQuotation {
   products: ProductItem[];
   myusConfig: MyUSConfig;
   customsConfig: BoliviaCustomsConfig;
+  customProration?: CustomProrationOverrides;
   totalLandedUSD: number;
   totalLandedBOB: number;
 }

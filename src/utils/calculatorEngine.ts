@@ -4,7 +4,8 @@ import type {
   MyUSShippingMethod,
   BoliviaCustomsConfig, 
   CalculationSummary, 
-  ProductCalculated 
+  ProductCalculated,
+  CustomProrationOverrides
 } from '../types/calculator';
 
 export const LBS_TO_KG = 0.45359237;
@@ -228,7 +229,8 @@ export function extrapolateMyUSRate(lbs: number, method: MyUSShippingMethod = 'd
 export function calculateSummary(
   products: ProductItem[],
   myus: MyUSConfig,
-  customs: BoliviaCustomsConfig
+  customs: BoliviaCustomsConfig,
+  customProration?: CustomProrationOverrides
 ): CalculationSummary {
   const totalItemsCount = products.reduce((acc, p) => acc + (Number(p.quantity) || 0), 0);
   const totalPackagesCount = products.reduce((acc, p) => acc + (p.packageCount || 1), 0);
@@ -293,14 +295,37 @@ export function calculateSummary(
   // Base Imponible CIF en Bolivia = Compra en eBay (FOB) + Total MyUS
   const cifBaseUSD = totalFobUSD + totalMyUSUSD;
 
-  // Prorrateo individual por producto
-  let totalGaUSD = 0;
-  let totalIvaUSD = 0;
   const dhlHandlingUSD = Math.max(0, Number(customs.dhlHandlingFeeUSD) || 0);
   const customsRate = Number(customs.exchangeRate) || 12.26;
   const otherFeesUSD = (Number(customs.otherCustomsFeesBOB) || 0) / customsRate;
 
-  const calculatedProducts: ProductCalculated[] = products.map((item) => {
+  // =========================================================================
+  // 1. CÁLCULO BASE INDIVIDUAL DE CADA PRODUCTO (PRORRATEO MIXTO ESTÁNDAR)
+  // =========================================================================
+  interface BaseProductData {
+    item: ProductItem;
+    itemTotalQty: number;
+    itemUnitPrice: number;
+    itemUnitWeight: number;
+    itemFobSubtotal: number;
+    itemTotalWeightLbs: number;
+    itemTotalWeightKg: number;
+    weightRatio: number;
+    valueRatio: number;
+    proratedFreightUSD: number;
+    proratedInsuranceUSD: number;
+    proratedLithiumUSD: number;
+    proratedAdminMyUSUSD: number;
+    proratedMyUSUSD: number;
+    itemCifUSD: number;
+    baseGaUSD: number;
+    baseIvaUSD: number;
+    baseTaxUSD: number;
+    baseDhlUSD: number;
+    proratedOtherUSD: number;
+  }
+
+  const baseItems: BaseProductData[] = products.map((item) => {
     const itemTotalQty = Math.max(1, Number(item.quantity) || 1);
     const itemUnitPrice = Math.max(0, Number(item.unitPriceUSD) || 0);
     const itemUnitWeight = Math.max(0, Number(item.unitWeightLbs) || 0);
@@ -311,18 +336,13 @@ export function calculateSummary(
     const weightRatio = totalWeightLbs > 0 ? (itemTotalWeightLbs / totalWeightLbs) : (products.length > 0 ? 1 / products.length : 0);
     const valueRatio = totalFobUSD > 0 ? (itemFobSubtotal / totalFobUSD) : (products.length > 0 ? 1 / products.length : 0);
 
-    // =========================================================================
-    // PRORRATEO MIXTO INTELIGENTE:
-    // =========================================================================
-    // 1. Flete internacional neto MyUS: se distribuye por PESO físico (libras en avión)
+    // Flete internacional MyUS: por peso físico (lbs en avión)
     const proratedFreightUSD = myusShippingUSD * weightRatio;
 
-    // 2. Seguro MyUS ($3.50 por cada $100 FOB): se distribuye por VALOR comercial FOB
+    // Seguro MyUS ($3.50 / $100): por valor comercial FOB
     const proratedInsuranceUSD = myusShippingPreferencesUSD * valueRatio;
 
-    // 3. Stickers de Batería de Litio ($8.00):
-    // Se distribuye entre los productos que realmente poseen batería de litio;
-    // de lo contrario, se distribuye por valor FOB.
+    // Baterías de litio ($8.00):
     const batteryItems = products.filter(p => p.hasLithiumBattery);
     let proratedLithiumUSD = 0;
     if (myusLithiumStickersUSD > 0) {
@@ -339,31 +359,208 @@ export function calculateSummary(
       }
     }
 
-    // 4. Cargos de casillero / suite no identificada ($8.99) y consolidación: por VALOR FOB
+    // Cargos de casillero y consolidación: por valor FOB
     const proratedAdminMyUSUSD = (myusPackageLevelUSD + myusConsolidationUSD) * valueRatio;
 
-    // Total MyUS individual justo para este producto
+    // Total MyUS para el producto (Courier MyUS queda vinculado al flete físico)
     const proratedMyUSUSD = proratedFreightUSD + proratedInsuranceUSD + proratedLithiumUSD + proratedAdminMyUSUSD;
 
-    // Base Imponible CIF del producto (FOB + cuota justa de transporte y seguro)
+    // Base Imponible CIF
     const itemCifUSD = itemFobSubtotal + proratedMyUSUSD;
 
-    // GA (Gravamen Arancelario): 0% exento para tecnología y electrónica
+    // GA (Gravamen Arancelario)
     const gaRate = (Math.max(0, Number(item.gaPercent) || 0)) / 100;
-    const itemGaUSD = itemCifUSD * gaRate;
+    const baseGaUSD = itemCifUSD * gaRate;
 
     // IVA (14.94% efectiva sobre CIF + GA)
     const ivaRate = (customs.ivaRate || 14.94) / 100;
-    const itemIvaUSD = (itemCifUSD + itemGaUSD) * ivaRate;
+    const baseIvaUSD = (itemCifUSD + baseGaUSD) * ivaRate;
+    const baseTaxUSD = baseGaUSD + baseIvaUSD;
 
-    // 5. Tasa fija de Despacho y Manejo DHL Bolivia ($40 USD):
-    // Se prorratea por VALOR FOB (trámite comercial fijo por guía completa, no flete de avión)
-    const proratedDhlUSD = dhlHandlingUSD * valueRatio;
+    // Tasa fija de Despacho y Manejo DHL Bolivia ($40 USD):
+    // Prorrateada proporcionalmente por PESO físico (lbs), al tratarse de un costo de manipulación y manejo físico
+    const baseDhlUSD = dhlHandlingUSD * weightRatio;
     const proratedOtherUSD = otherFeesUSD * valueRatio;
 
-    // Costo desembarcado total
-    const totalLandedCostUSD = itemFobSubtotal + proratedMyUSUSD + itemGaUSD + itemIvaUSD + proratedDhlUSD + proratedOtherUSD;
-    const unitLandedCostUSD = itemTotalQty > 0 ? totalLandedCostUSD / itemTotalQty : 0;
+    return {
+      item,
+      itemTotalQty,
+      itemUnitPrice,
+      itemUnitWeight,
+      itemFobSubtotal,
+      itemTotalWeightLbs,
+      itemTotalWeightKg,
+      weightRatio,
+      valueRatio,
+      proratedFreightUSD,
+      proratedInsuranceUSD,
+      proratedLithiumUSD,
+      proratedAdminMyUSUSD,
+      proratedMyUSUSD,
+      itemCifUSD,
+      baseGaUSD,
+      baseIvaUSD,
+      baseTaxUSD,
+      baseDhlUSD,
+      proratedOtherUSD
+    };
+  });
+
+  // =========================================================================
+  // 2. REDISTRIBUCIÓN DINÁMICA DE COSTOS (ACTIVABLE SOLO CON 2 O MÁS ARTÍCULOS)
+  // =========================================================================
+  const canRedistribute = products.length >= 2;
+  const manualTaxes = (canRedistribute && customProration?.manualUnitTaxes) ? customProration.manualUnitTaxes : {};
+  const manualDhl = (canRedistribute && customProration?.manualUnitDhl) ? customProration.manualUnitDhl : {};
+
+  const validTaxOverrideIds = new Set(
+    products.filter(p => manualTaxes[p.id] !== undefined && manualTaxes[p.id] !== null).map(p => p.id)
+  );
+  const validDhlOverrideIds = new Set(
+    products.filter(p => manualDhl[p.id] !== undefined && manualDhl[p.id] !== null).map(p => p.id)
+  );
+
+  const hasAnyTaxCustom = validTaxOverrideIds.size > 0;
+  const hasAnyDhlCustom = validDhlOverrideIds.size > 0;
+  const hasCustomProration = hasAnyTaxCustom || hasAnyDhlCustom;
+
+  // --- 2.1 Redistribución de DHL ($40 fijo) ---
+  const finalDhlUSDMap: Record<string, number> = {};
+  const isDhlCustomMap: Record<string, boolean> = {};
+
+  if (hasAnyDhlCustom && canRedistribute) {
+    let effectiveDhlOverridden = products.filter(p => validDhlOverrideIds.has(p.id));
+    let unmodifiedDhl = products.filter(p => !validDhlOverrideIds.has(p.id));
+
+    // Si todos fueron modificados, el último actúa como equilibrador automático para conservar la suma
+    if (unmodifiedDhl.length === 0) {
+      const balanceProduct = products[products.length - 1];
+      unmodifiedDhl = [balanceProduct];
+      effectiveDhlOverridden = products.filter(p => p.id !== balanceProduct.id);
+    }
+
+    let sumManualDhl = 0;
+    effectiveDhlOverridden.forEach(p => {
+      const qty = Math.max(1, Number(p.quantity) || 1);
+      const unitVal = Math.max(0, Number(manualDhl[p.id]) || 0);
+      const lineDhl = unitVal * qty;
+      finalDhlUSDMap[p.id] = lineDhl;
+      isDhlCustomMap[p.id] = true;
+      sumManualDhl += lineDhl;
+    });
+
+    // Asegurar que no exceda el fondo total de DHL
+    if (sumManualDhl > dhlHandlingUSD && sumManualDhl > 0) {
+      const scale = dhlHandlingUSD / sumManualDhl;
+      effectiveDhlOverridden.forEach(p => {
+        finalDhlUSDMap[p.id] = finalDhlUSDMap[p.id] * scale;
+      });
+      sumManualDhl = dhlHandlingUSD;
+    }
+
+    const remDhlPool = Math.max(0, dhlHandlingUSD - sumManualDhl);
+    const unmodifiedBaseSum = unmodifiedDhl.reduce((acc, p) => {
+      const base = baseItems.find(b => b.item.id === p.id);
+      return acc + (base?.baseDhlUSD || 0);
+    }, 0);
+
+    unmodifiedDhl.forEach(p => {
+      const base = baseItems.find(b => b.item.id === p.id);
+      if (unmodifiedBaseSum > 0) {
+        finalDhlUSDMap[p.id] = remDhlPool * ((base?.baseDhlUSD || 0) / unmodifiedBaseSum);
+      } else {
+        finalDhlUSDMap[p.id] = remDhlPool / unmodifiedDhl.length;
+      }
+      isDhlCustomMap[p.id] = false;
+    });
+  } else {
+    baseItems.forEach(b => {
+      finalDhlUSDMap[b.item.id] = b.baseDhlUSD;
+      isDhlCustomMap[b.item.id] = false;
+    });
+  }
+
+  // --- 2.2 Redistribución de Impuestos Aduaneros (GA + IVA) ---
+  const totalCustomsTaxesBaseUSD = baseItems.reduce((acc, b) => acc + b.baseTaxUSD, 0);
+  const finalTaxUSDMap: Record<string, number> = {};
+  const isTaxCustomMap: Record<string, boolean> = {};
+
+  if (hasAnyTaxCustom && canRedistribute) {
+    let effectiveTaxOverridden = products.filter(p => validTaxOverrideIds.has(p.id));
+    let unmodifiedTax = products.filter(p => !validTaxOverrideIds.has(p.id));
+
+    if (unmodifiedTax.length === 0) {
+      const balanceProduct = products[products.length - 1];
+      unmodifiedTax = [balanceProduct];
+      effectiveTaxOverridden = products.filter(p => p.id !== balanceProduct.id);
+    }
+
+    let sumManualTax = 0;
+    effectiveTaxOverridden.forEach(p => {
+      const qty = Math.max(1, Number(p.quantity) || 1);
+      const unitVal = Math.max(0, Number(manualTaxes[p.id]) || 0);
+      const lineTax = unitVal * qty;
+      finalTaxUSDMap[p.id] = lineTax;
+      isTaxCustomMap[p.id] = true;
+      sumManualTax += lineTax;
+    });
+
+    if (sumManualTax > totalCustomsTaxesBaseUSD && sumManualTax > 0) {
+      const scale = totalCustomsTaxesBaseUSD / sumManualTax;
+      effectiveTaxOverridden.forEach(p => {
+        finalTaxUSDMap[p.id] = finalTaxUSDMap[p.id] * scale;
+      });
+      sumManualTax = totalCustomsTaxesBaseUSD;
+    }
+
+    const remTaxPool = Math.max(0, totalCustomsTaxesBaseUSD - sumManualTax);
+    const unmodifiedBaseTaxSum = unmodifiedTax.reduce((acc, p) => {
+      const base = baseItems.find(b => b.item.id === p.id);
+      return acc + (base?.baseTaxUSD || 0);
+    }, 0);
+
+    unmodifiedTax.forEach(p => {
+      const base = baseItems.find(b => b.item.id === p.id);
+      if (unmodifiedBaseTaxSum > 0) {
+        finalTaxUSDMap[p.id] = remTaxPool * ((base?.baseTaxUSD || 0) / unmodifiedBaseTaxSum);
+      } else {
+        finalTaxUSDMap[p.id] = remTaxPool / unmodifiedTax.length;
+      }
+      isTaxCustomMap[p.id] = false;
+    });
+  } else {
+    baseItems.forEach(b => {
+      finalTaxUSDMap[b.item.id] = b.baseTaxUSD;
+      isTaxCustomMap[b.item.id] = false;
+    });
+  }
+
+  // =========================================================================
+  // 3. GENERACIÓN DE PRODUCTOS CALCULADOS Y PRECIOS FINALES DE VENTA
+  // =========================================================================
+  let totalGaUSD = 0;
+  let totalIvaUSD = 0;
+
+  const calculatedProducts: ProductCalculated[] = baseItems.map((b) => {
+    const finalTax = finalTaxUSDMap[b.item.id] ?? b.baseTaxUSD;
+    const finalDhl = finalDhlUSDMap[b.item.id] ?? b.baseDhlUSD;
+
+    let itemGaUSD = 0;
+    let itemIvaUSD = 0;
+    if (b.baseTaxUSD > 0) {
+      const gaShare = b.baseGaUSD / b.baseTaxUSD;
+      itemGaUSD = finalTax * gaShare;
+      itemIvaUSD = finalTax - itemGaUSD;
+    } else {
+      itemGaUSD = 0;
+      itemIvaUSD = finalTax;
+    }
+
+    totalGaUSD += itemGaUSD;
+    totalIvaUSD += itemIvaUSD;
+
+    const totalLandedCostUSD = b.itemFobSubtotal + b.proratedMyUSUSD + itemGaUSD + itemIvaUSD + finalDhl + b.proratedOtherUSD;
+    const unitLandedCostUSD = b.itemTotalQty > 0 ? totalLandedCostUSD / b.itemTotalQty : 0;
 
     // Conversión a Bs.
     const rate = customs.exchangeRate || 12.26;
@@ -371,32 +568,29 @@ export function calculateSummary(
     const unitLandedCostBOB = unitLandedCostUSD * rate;
 
     // Margen y precio de venta
-    const marginMultiplier = 1 + ((Math.max(0, Number(item.targetMarginPercent) || 0)) / 100);
+    const marginMultiplier = 1 + ((Math.max(0, Number(b.item.targetMarginPercent) || 0)) / 100);
     const suggestedSalePriceUSD = unitLandedCostUSD * marginMultiplier;
     const suggestedSalePriceBOB = suggestedSalePriceUSD * rate;
 
     const unitProfitUSD = suggestedSalePriceUSD - unitLandedCostUSD;
     const unitProfitBOB = unitProfitUSD * rate;
-    const totalProfitUSD = unitProfitUSD * itemTotalQty;
+    const totalProfitUSD = unitProfitUSD * b.itemTotalQty;
     const totalProfitBOB = totalProfitUSD * rate;
 
-    totalGaUSD += itemGaUSD;
-    totalIvaUSD += itemIvaUSD;
-
     return {
-      item,
-      totalWeightLbs: itemTotalWeightLbs,
-      totalWeightKg: itemTotalWeightKg,
-      totalFobUSD: itemFobSubtotal,
-      fobWeightRatio: weightRatio * 100,
-      fobValueRatio: valueRatio * 100,
-      proratedMyUSUSD,
-      proratedFreightUSD,
-      proratedInsuranceUSD,
-      cifUSD: itemCifUSD,
+      item: b.item,
+      totalWeightLbs: b.itemTotalWeightLbs,
+      totalWeightKg: b.itemTotalWeightKg,
+      totalFobUSD: b.itemFobSubtotal,
+      fobWeightRatio: b.weightRatio * 100,
+      fobValueRatio: b.valueRatio * 100,
+      proratedMyUSUSD: b.proratedMyUSUSD,
+      proratedFreightUSD: b.proratedFreightUSD,
+      proratedInsuranceUSD: b.proratedInsuranceUSD,
+      cifUSD: b.itemCifUSD,
       gaUSD: itemGaUSD,
       ivaUSD: itemIvaUSD,
-      proratedDhlUSD,
+      proratedDhlUSD: finalDhl,
       totalLandedCostUSD,
       unitLandedCostUSD,
       totalLandedCostBOB,
@@ -406,7 +600,9 @@ export function calculateSummary(
       unitProfitUSD,
       unitProfitBOB,
       totalProfitUSD,
-      totalProfitBOB
+      totalProfitBOB,
+      isTaxCustom: isTaxCustomMap[b.item.id],
+      isDhlCustom: isDhlCustomMap[b.item.id]
     };
   });
 
@@ -466,6 +662,7 @@ export function calculateSummary(
     totalProjectedProfitUSD,
     totalProjectedProfitBOB,
     overallRoiPercent,
+    hasCustomProration,
     products: calculatedProducts
   };
 }
