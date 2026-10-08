@@ -12,9 +12,12 @@ import {
   Clock,
   Sparkles,
   Tag,
-  AlertCircle
+  AlertCircle,
+  Plus,
+  Trash2,
+  Receipt
 } from 'lucide-react';
-import type { MyUSConfig, MyUSShippingMethod } from '../types/calculator';
+import type { MyUSConfig, MyUSShippingMethod, MyUSCustomFee } from '../types/calculator';
 import { MYUS_SHIPPING_OPTIONS, getAllCarrierRates } from '../utils/calculatorEngine';
 import { formatUSD, formatBOB } from '../utils/formatters';
 import { NumericInput } from './NumericInput';
@@ -83,12 +86,42 @@ export const MyUSSection: React.FC<MyUSSectionProps> = ({
   const isPremium = myusConfig.membershipType === 'premium';
   const consolidationFee = isPremium ? 0 : (myusConfig.consolidationFeeUSD || 3.00);
 
+  // 6. Cargos adicionales replicables
+  const customFees: MyUSCustomFee[] = myusConfig.customFees || [];
+  const customFeesTotal = parseFloat(
+    customFees.reduce((acc, f) => acc + (Math.max(0, Number(f.amountUSD) || 0)), 0).toFixed(2)
+  );
+
+  const handleAddCustomFee = (presetName = '', presetAmount = 0) => {
+    const newFee: MyUSCustomFee = {
+      id: `fee-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      name: presetName,
+      amountUSD: presetAmount
+    };
+    onUpdateMyUS({
+      customFees: [...customFees, newFee]
+    });
+  };
+
+  const handleUpdateCustomFee = (id: string, updates: Partial<MyUSCustomFee>) => {
+    onUpdateMyUS({
+      customFees: customFees.map(f => (f.id === id ? { ...f, ...updates } : f))
+    });
+  };
+
+  const handleRemoveCustomFee = (id: string) => {
+    onUpdateMyUS({
+      customFees: customFees.filter(f => f.id !== id)
+    });
+  };
+
   // Gran Total MyUS (Factura Courier que compone el CIF en Bolivia)
   const totalMyUSUSD = netShippingCharge + 
     activePreferencesCharge + 
     activePackageLevelCharge + 
     activeLithiumCharge + 
-    consolidationFee;
+    consolidationFee +
+    customFeesTotal;
 
   const totalMyUSBOB = totalMyUSUSD * exchangeRate;
 
@@ -644,6 +677,127 @@ export const MyUSSection: React.FC<MyUSSectionProps> = ({
               </span>
             </div>
           </div>
+
+          {/* 6. Otros Cargos Asociados Replicables (Cargos MyUS Adicionales) */}
+          <div className="myus-custom-fees-block">
+            <div className="custom-fees-header">
+              <div className="custom-fees-title-group">
+                <Receipt size={16} className="text-cyan" />
+                <div>
+                  <span className="charge-label">Otros Cargos Asociados / Servicios MyUS</span>
+                  <span className="charge-desc">
+                    Agrega servicios especiales (reempaque, fotografías, división de bultos, almacenaje extra, etc.). Replicable para múltiples cobros.
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="btn-add-custom-fee"
+                onClick={() => handleAddCustomFee('', 0)}
+              >
+                <Plus size={14} />
+                <span>Agregar Cargo</span>
+              </button>
+            </div>
+
+            {/* Accesos rápidos de cargos comunes en MyUS */}
+            <div className="fee-presets-quick-row">
+              <span className="fee-presets-label">Comunes:</span>
+              <button
+                type="button"
+                className="fee-preset-pill"
+                onClick={() => handleAddCustomFee('Reempaque / Consolidación Especial', 5.00)}
+              >
+                + Reempaque ($5.00)
+              </button>
+              <button
+                type="button"
+                className="fee-preset-pill"
+                onClick={() => handleAddCustomFee('Fotografías de Contenido', 10.00)}
+              >
+                + Fotos ($10.00)
+              </button>
+              <button
+                type="button"
+                className="fee-preset-pill"
+                onClick={() => handleAddCustomFee('Almacenaje Adicional', 15.00)}
+              >
+                + Almacenaje ($15.00)
+              </button>
+              <button
+                type="button"
+                className="fee-preset-pill"
+                onClick={() => handleAddCustomFee('División de Paquetes (Split)', 10.00)}
+              >
+                + Split ($10.00)
+              </button>
+            </div>
+
+            {/* Listado de cargos replicables */}
+            {customFees.length > 0 ? (
+              <div className="custom-fees-list">
+                {customFees.map((fee, idx) => (
+                  <div key={fee.id} className="custom-fee-item-row">
+                    <div className="fee-name-field">
+                      <span className="fee-idx-bullet">#{idx + 1}</span>
+                      <input
+                        type="text"
+                        value={fee.name}
+                        onChange={(e) => handleUpdateCustomFee(fee.id, { name: e.target.value })}
+                        placeholder="Nombre del cargo (ej. Reempaque, Fotos, Almacenaje)"
+                        className="table-input custom-fee-input"
+                      />
+                    </div>
+
+                    <div className="fee-cost-field">
+                      <div className="input-with-currency small-pill-input">
+                        <span className="currency-symbol">$</span>
+                        <NumericInput
+                          min={0}
+                          fallbackOnBlur={0}
+                          allowDecimals={true}
+                          value={fee.amountUSD}
+                          onValueChange={(val) => handleUpdateCustomFee(fee.id, { amountUSD: val })}
+                          className="table-input price-input text-right"
+                          placeholder="0.00"
+                        />
+                        <span className="unit-symbol">USD</span>
+                      </div>
+
+                      <button
+                        type="button"
+                        className="btn-delete-fee"
+                        onClick={() => handleRemoveCustomFee(fee.id)}
+                        title="Eliminar este cargo"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                <div className="custom-fees-footer">
+                  <button
+                    type="button"
+                    className="btn-add-another-fee"
+                    onClick={() => handleAddCustomFee('', 0)}
+                  >
+                    <Plus size={13} />
+                    <span>Agregar Otro Cargo Asociado</span>
+                  </button>
+                  <span className="custom-fees-subtotal-text">
+                    Subtotal otros cargos: <strong>{formatUSD(customFeesTotal)}</strong>
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="custom-fees-empty">
+                <span className="text-muted">
+                  No hay cargos adicionales configurados. Pulsa en <strong>+ Agregar Cargo</strong> o en uno de los accesos rápidos para incluir cobros de MyUS.
+                </span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Total Cost Display */}
@@ -651,7 +805,7 @@ export const MyUSSection: React.FC<MyUSSectionProps> = ({
           <div className="total-footer-left">
             <span className="total-title">Total Cost (Factura MyUS)</span>
             <span className="total-sub">
-              Flete Neto ({formatUSD(netShippingCharge)}) + Seguro ({formatUSD(activePreferencesCharge)}) + Cargos MyUS ({formatUSD(activePackageLevelCharge + activeLithiumCharge + consolidationFee)})
+              Flete Neto ({formatUSD(netShippingCharge)}) + Seguro ({formatUSD(activePreferencesCharge)}) + Cargos MyUS ({formatUSD(activePackageLevelCharge + activeLithiumCharge + consolidationFee + customFeesTotal)})
             </span>
           </div>
 

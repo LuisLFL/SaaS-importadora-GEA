@@ -8,14 +8,18 @@ import {
   RotateCcw,
   Sparkles,
   Info,
-  CheckCircle2
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  Check
 } from 'lucide-react';
-import type { ProductCalculated, CustomProrationOverrides } from '../types/calculator';
+import type { ProductCalculated, CustomProrationOverrides, ProductItem } from '../types/calculator';
 import { formatUSD, formatBOB } from '../utils/formatters';
 import { NumericInput } from './NumericInput';
 
 interface ProductCostBreakdownTableProps {
   products: ProductCalculated[];
+  allProducts?: ProductItem[];
   exchangeRate: number;
   currencyMode: 'both' | 'usd' | 'bob';
   customProration?: CustomProrationOverrides;
@@ -24,12 +28,15 @@ interface ProductCostBreakdownTableProps {
   onClearTaxOverride?: (productId: string) => void;
   onClearDhlOverride?: (productId: string) => void;
   onResetAllOverrides?: () => void;
+  onToggleExcludeProduct?: (productId: string) => void;
+  onRestoreAllProducts?: () => void;
   totalCustomsTaxesUSD?: number;
   totalDhlHandlingUSD?: number;
 }
 
 export const ProductCostBreakdownTable: React.FC<ProductCostBreakdownTableProps> = ({
   products,
+  allProducts = [],
   currencyMode,
   customProration,
   onUpdateTaxOverride,
@@ -37,6 +44,8 @@ export const ProductCostBreakdownTable: React.FC<ProductCostBreakdownTableProps>
   onClearTaxOverride,
   onClearDhlOverride,
   onResetAllOverrides,
+  onToggleExcludeProduct,
+  onRestoreAllProducts,
   totalCustomsTaxesUSD = 0,
   totalDhlHandlingUSD = 40
 }) => {
@@ -46,6 +55,18 @@ export const ProductCostBreakdownTable: React.FC<ProductCostBreakdownTableProps>
   const hasTaxOverrides = Object.keys(manualTaxes).length > 0;
   const hasDhlOverrides = Object.keys(manualDhl).length > 0;
   const hasAnyOverrides = canRedistribute && (hasTaxOverrides || hasDhlOverrides);
+
+  // Excluidos
+  const excludedItems = allProducts.filter(p => !!p.isExcluded);
+  const excludedCount = excludedItems.length;
+
+  // Mapa de productos calculados
+  const calculatedMap = new Map<string, ProductCalculated>(
+    products.map(p => [p.item.id, p])
+  );
+
+  // Lista a renderizar: si se pasa allProducts, usamos allProducts para mantener el orden de filas; sino products
+  const displayItems: ProductItem[] = allProducts.length > 0 ? allProducts : products.map(p => p.item);
 
   return (
     <div className="section-card breakdown-section-card">
@@ -57,7 +78,12 @@ export const ProductCostBreakdownTable: React.FC<ProductCostBreakdownTableProps>
           <div>
             <div className="section-title-row">
               <h2 className="section-title">5. Prorrateo Unitario & Fijación de Precios de Venta</h2>
-              {hasAnyOverrides ? (
+              {excludedCount > 0 ? (
+                <span className="section-status-chip sim-chip">
+                  <EyeOff size={13} />
+                  Simulación: {excludedCount} oculto{excludedCount > 1 ? 's' : ''} ({products.length} activos)
+                </span>
+              ) : hasAnyOverrides ? (
                 <span className="section-status-chip active">
                   <Sparkles size={13} />
                   Prorrateo redistribuido activo
@@ -70,18 +96,61 @@ export const ProductCostBreakdownTable: React.FC<ProductCostBreakdownTableProps>
               ) : null}
             </div>
             <p className="section-subtitle">
-              Desglose exacto de costos por artículo. Puedes ajustar los Impuestos o DHL de cualquier fila para redistribuir costos automáticamente sin alterar el total.
+              Desglose exacto de costos por artículo. Puedes marcar <strong>Ocultar</strong> en cualquier box para simular los costos finales sin ese producto, o ajustar los Impuestos/DHL para redistribuir.
             </p>
           </div>
         </div>
+
+        {excludedCount > 0 && onRestoreAllProducts && (
+          <div className="section-header-actions">
+            <button
+              type="button"
+              className="action-btn secondary-btn"
+              onClick={onRestoreAllProducts}
+              title="Restaurar todos los productos excluidos"
+            >
+              <RotateCcw size={15} />
+              <span>Restaurar todos ({allProducts.length})</span>
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* Banner de Notificación de Simulación en Tabla Final */}
+      {excludedCount > 0 && (
+        <div className="simulation-notice-bar">
+          <div className="simulation-notice-left">
+            <div className="simulation-pulse-icon">
+              <EyeOff size={15} />
+            </div>
+            <div className="simulation-notice-text">
+              <strong>Simulación What-If Activa:</strong> Se {excludedCount === 1 ? 'ha ocultado 1 producto' : `han ocultado ${excludedCount} productos`} ({products.length} activos). El prorrateo aduanero, flete y costos desembarcados se han recalculado con los productos restantes.
+            </div>
+          </div>
+          {onRestoreAllProducts && (
+            <button
+              type="button"
+              className="btn-restore-all-simulation"
+              onClick={onRestoreAllProducts}
+            >
+              <RotateCcw size={13} />
+              <span>Restaurar todos ({allProducts.length})</span>
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="table-responsive-container">
         <table className="custom-data-table breakdown-table">
           <thead>
             <tr>
-              <th style={{ width: '20%' }}>Producto</th>
-              <th style={{ width: '6%', textAlign: 'center' }}>Cant.</th>
+              <th style={{ width: '6%', textAlign: 'center' }} title="Marcar box para ocultar este producto y recalcular los costos con los restantes">
+                <div className="th-center-wrap">
+                  <span>Ocultar</span>
+                </div>
+              </th>
+              <th style={{ width: '18%' }}>Producto</th>
+              <th style={{ width: '5%', textAlign: 'center' }}>Cant.</th>
               <th style={{ width: '9%' }}>FOB Unit.</th>
               
               {/* Courier MyUS: No editable (ligado al peso) */}
@@ -126,43 +195,110 @@ export const ProductCostBreakdownTable: React.FC<ProductCostBreakdownTableProps>
                 </div>
               </th>
 
-              <th style={{ width: '14%' }} className="highlight-th">Costo Unit. Bolivia</th>
-              <th style={{ width: '14%' }} className="sale-th">Precio Venta Sug.</th>
+              <th style={{ width: '13%' }} className="highlight-th">Costo Unit. Bolivia</th>
+              <th style={{ width: '12%' }} className="sale-th">Precio Venta Sug.</th>
             </tr>
           </thead>
           <tbody>
-            {products.map((item) => {
-              const qty = Math.max(1, item.item.quantity || 1);
-              const myusPerUnit = qty > 0 ? item.proratedMyUSUSD / qty : 0;
-              const taxesPerUnit = qty > 0 ? (item.gaUSD + item.ivaUSD) / qty : 0;
-              const dhlPerUnit = qty > 0 ? item.proratedDhlUSD / qty : 0;
+            {displayItems.map((item, index) => {
+              const isExcluded = !!item.isExcluded;
 
-              const isTaxCustom = !!item.isTaxCustom;
-              const isDhlCustom = !!item.isDhlCustom;
+              // Fila Oculta / Excluida en Tabla Final
+              if (isExcluded) {
+                const itemFobSubtotal = (item.quantity || 1) * (item.unitPriceUSD || 0);
+                return (
+                  <tr key={item.id} className="breakdown-row product-row-excluded">
+                    <td style={{ textAlign: 'center' }}>
+                      <label className="exclude-checkbox-label is-checked" title="Desmarcar box para incluir de nuevo en el cálculo">
+                        <input
+                          type="checkbox"
+                          checked={true}
+                          onChange={() => onToggleExcludeProduct?.(item.id)}
+                          className="exclude-checkbox-input"
+                        />
+                        <span className="exclude-custom-box is-checked">
+                          <Check size={12} strokeWidth={3} />
+                        </span>
+                      </label>
+                    </td>
+                    <td colSpan={7}>
+                      <div className="excluded-row-content">
+                        <div className="excluded-info-left">
+                          <strong className="excluded-strikethrough-name">
+                            {item.name || `Producto #${index + 1}`}
+                          </strong>
+                          <span className="excluded-chip">
+                            <EyeOff size={11} /> Oculto del cálculo final
+                          </span>
+                        </div>
+                        <div className="excluded-info-right">
+                          <span className="excluded-meta-pill">
+                            {item.quantity} ud • {formatUSD(itemFobSubtotal)} FOB • {(item.quantity * item.unitWeightLbs).toFixed(1)} lbs
+                          </span>
+                          <button
+                            type="button"
+                            className="btn-quick-reactivate"
+                            onClick={() => onToggleExcludeProduct?.(item.id)}
+                            title="Reactivar e incluir en el cálculo final"
+                          >
+                            <Eye size={12} /> Reactivar
+                          </button>
+                        </div>
+                      </div>
+                    </td>
+                    <td></td>
+                  </tr>
+                );
+              }
+
+              // Fila Activa Calculada
+              const calc = calculatedMap.get(item.id);
+              if (!calc) return null;
+
+              const qty = Math.max(1, calc.item.quantity || 1);
+              const myusPerUnit = qty > 0 ? calc.proratedMyUSUSD / qty : 0;
+              const taxesPerUnit = qty > 0 ? (calc.gaUSD + calc.ivaUSD) / qty : 0;
+              const dhlPerUnit = qty > 0 ? calc.proratedDhlUSD / qty : 0;
+
+              const isTaxCustom = !!calc.isTaxCustom;
+              const isDhlCustom = !!calc.isDhlCustom;
               const maxTaxPerUnit = totalCustomsTaxesUSD > 0 ? totalCustomsTaxesUSD / qty : 99999;
               const maxDhlPerUnit = totalDhlHandlingUSD > 0 ? totalDhlHandlingUSD / qty : 40;
 
               return (
-                <tr key={item.item.id} className={`breakdown-row ${(isTaxCustom || isDhlCustom) ? 'row-customized' : ''}`}>
+                <tr key={calc.item.id} className={`breakdown-row ${(isTaxCustom || isDhlCustom) ? 'row-customized' : ''}`}>
+                  {/* Box Ocultar / Excluir */}
+                  <td style={{ textAlign: 'center' }}>
+                    <label className="exclude-checkbox-label" title="Marcar box para ocultar este producto y recalcular los costos con los restantes">
+                      <input
+                        type="checkbox"
+                        checked={false}
+                        onChange={() => onToggleExcludeProduct?.(calc.item.id)}
+                        className="exclude-checkbox-input"
+                      />
+                      <span className="exclude-custom-box" />
+                    </label>
+                  </td>
+
                   {/* Producto y metadatos */}
                   <td>
                     <div className="product-item-cell">
-                      <strong className="item-name">{item.item.name || 'Sin nombre'}</strong>
+                      <strong className="item-name">{calc.item.name || 'Sin nombre'}</strong>
                       <span className="item-sub">
-                        {item.item.sellerOrStore || 'eBay'} • {item.totalWeightLbs.toFixed(1)} lbs ({item.fobWeightRatio.toFixed(1)}% peso) • {item.fobValueRatio.toFixed(1)}% valor
+                        {calc.item.sellerOrStore || 'eBay'} • {calc.totalWeightLbs.toFixed(1)} lbs ({calc.fobWeightRatio.toFixed(1)}% peso) • {calc.fobValueRatio.toFixed(1)}% valor
                       </span>
                     </div>
                   </td>
 
                   {/* Cantidad */}
                   <td style={{ textAlign: 'center' }}>
-                    <span className="qty-tag">{item.item.quantity}</span>
+                    <span className="qty-tag">{calc.item.quantity}</span>
                   </td>
 
                   {/* FOB Unit */}
                   <td>
                     <div className="fob-cell">
-                      <span>{formatUSD(item.item.unitPriceUSD)}</span>
+                      <span>{formatUSD(calc.item.unitPriceUSD)}</span>
                     </div>
                   </td>
 
@@ -176,9 +312,9 @@ export const ProductCostBreakdownTable: React.FC<ProductCostBreakdownTableProps>
                         </span>
                       </div>
                       <span className="cost-sub">
-                        {item.proratedFreightUSD !== undefined 
-                          ? `Flete: ${formatUSD(item.proratedFreightUSD / qty)} + Seg.` 
-                          : `Total: ${formatUSD(item.proratedMyUSUSD)}`}
+                        {calc.proratedFreightUSD !== undefined 
+                          ? `Flete: ${formatUSD(calc.proratedFreightUSD / qty)} + Seg.` 
+                          : `Total: ${formatUSD(calc.proratedMyUSUSD)}`}
                       </span>
                     </div>
                   </td>
@@ -191,7 +327,7 @@ export const ProductCostBreakdownTable: React.FC<ProductCostBreakdownTableProps>
                           <span className="cost-currency-prefix">$</span>
                           <NumericInput
                             value={parseFloat(taxesPerUnit.toFixed(2))}
-                            onValueChange={(val) => onUpdateTaxOverride?.(item.item.id, val)}
+                            onValueChange={(val) => onUpdateTaxOverride?.(calc.item.id, val)}
                             min={0}
                             max={maxTaxPerUnit}
                             className={`table-cost-input ${isTaxCustom ? 'custom-input' : ''}`}
@@ -202,7 +338,7 @@ export const ProductCostBreakdownTable: React.FC<ProductCostBreakdownTableProps>
                               type="button"
                               className="btn-cell-revert"
                               title="Restablecer impuesto de este artículo al cálculo automático"
-                              onClick={() => onClearTaxOverride(item.item.id)}
+                              onClick={() => onClearTaxOverride(calc.item.id)}
                             >
                               <RotateCcw size={11} />
                             </button>
@@ -210,7 +346,7 @@ export const ProductCostBreakdownTable: React.FC<ProductCostBreakdownTableProps>
                         </div>
                         <div className="cost-sub-row">
                           <span className="cost-sub">
-                            GA ({item.item.gaPercent}%): {formatUSD(item.gaUSD / qty)} + IVA
+                            GA ({calc.item.gaPercent}%): {formatUSD(calc.gaUSD / qty)} + IVA
                           </span>
                           {isTaxCustom ? (
                             <span className="badge-pill-manual">Manual</span>
@@ -223,7 +359,7 @@ export const ProductCostBreakdownTable: React.FC<ProductCostBreakdownTableProps>
                       <div className="sub-cost-cell" title="Se requieren 2 o más artículos para redistribuir costos">
                         <span className="cost-main">{formatUSD(taxesPerUnit)}</span>
                         <span className="cost-sub">
-                          GA ({item.item.gaPercent}%): {formatUSD(item.gaUSD / qty)} + IVA
+                          GA ({calc.item.gaPercent}%): {formatUSD(calc.gaUSD / qty)} + IVA
                         </span>
                       </div>
                     )}
@@ -237,7 +373,7 @@ export const ProductCostBreakdownTable: React.FC<ProductCostBreakdownTableProps>
                           <span className="cost-currency-prefix">$</span>
                           <NumericInput
                             value={parseFloat(dhlPerUnit.toFixed(2))}
-                            onValueChange={(val) => onUpdateDhlOverride?.(item.item.id, val)}
+                            onValueChange={(val) => onUpdateDhlOverride?.(calc.item.id, val)}
                             min={0}
                             max={maxDhlPerUnit}
                             className={`table-cost-input ${isDhlCustom ? 'custom-input' : ''}`}
@@ -248,7 +384,7 @@ export const ProductCostBreakdownTable: React.FC<ProductCostBreakdownTableProps>
                               type="button"
                               className="btn-cell-revert"
                               title="Restablecer DHL de este artículo al prorrateo automático por peso"
-                              onClick={() => onClearDhlOverride(item.item.id)}
+                              onClick={() => onClearDhlOverride(calc.item.id)}
                             >
                               <RotateCcw size={11} />
                             </button>
@@ -256,7 +392,7 @@ export const ProductCostBreakdownTable: React.FC<ProductCostBreakdownTableProps>
                         </div>
                         <div className="cost-sub-row">
                           <span className="cost-sub">
-                            {qty > 1 ? `Lote: ${formatUSD(item.proratedDhlUSD)} • ${item.fobWeightRatio.toFixed(1)}% peso` : `${item.fobWeightRatio.toFixed(1)}% peso`}
+                            {qty > 1 ? `Lote: ${formatUSD(calc.proratedDhlUSD)} • ${calc.fobWeightRatio.toFixed(1)}% peso` : `${calc.fobWeightRatio.toFixed(1)}% peso`}
                           </span>
                           {isDhlCustom ? (
                             <span className="badge-pill-manual">Manual</span>
@@ -268,7 +404,7 @@ export const ProductCostBreakdownTable: React.FC<ProductCostBreakdownTableProps>
                     ) : (
                       <div className="sub-cost-cell" title="Prorrateado por peso físico. Se requieren 2 o más artículos para redistribuir costos">
                         <span className="cost-main">{formatUSD(dhlPerUnit)}</span>
-                        <span className="cost-sub">{item.fobWeightRatio.toFixed(1)}% peso</span>
+                        <span className="cost-sub">{calc.fobWeightRatio.toFixed(1)}% peso</span>
                       </div>
                     )}
                   </td>
@@ -277,14 +413,14 @@ export const ProductCostBreakdownTable: React.FC<ProductCostBreakdownTableProps>
                   <td className={`landed-cost-cell ${(isTaxCustom || isDhlCustom) ? 'highlight-custom-landed' : ''}`}>
                     <div className="landed-badge">
                       {currencyMode !== 'bob' && (
-                        <span className="landed-usd">{formatUSD(item.unitLandedCostUSD)}</span>
+                        <span className="landed-usd">{formatUSD(calc.unitLandedCostUSD)}</span>
                       )}
                       {currencyMode !== 'usd' && (
-                        <span className="landed-bob">{formatBOB(item.unitLandedCostBOB)}</span>
+                        <span className="landed-bob">{formatBOB(calc.unitLandedCostBOB)}</span>
                       )}
                     </div>
                     <span className="total-lot-hint">
-                      Lote: {currencyMode === 'usd' ? formatUSD(item.totalLandedCostUSD) : currencyMode === 'bob' ? formatBOB(item.totalLandedCostBOB) : `${formatUSD(item.totalLandedCostUSD)} (${formatBOB(item.totalLandedCostBOB)})`}
+                      Lote: {currencyMode === 'usd' ? formatUSD(calc.totalLandedCostUSD) : currencyMode === 'bob' ? formatBOB(calc.totalLandedCostBOB) : `${formatUSD(calc.totalLandedCostUSD)} (${formatBOB(calc.totalLandedCostBOB)})`}
                     </span>
                   </td>
 
@@ -292,16 +428,16 @@ export const ProductCostBreakdownTable: React.FC<ProductCostBreakdownTableProps>
                   <td className="suggested-sale-cell">
                     <div className="sale-badge">
                       {currencyMode !== 'bob' && (
-                        <span className="sale-usd">{formatUSD(item.suggestedSalePriceUSD)}</span>
+                        <span className="sale-usd">{formatUSD(calc.suggestedSalePriceUSD)}</span>
                       )}
                       {currencyMode !== 'usd' && (
-                        <span className="sale-bob">{formatBOB(item.suggestedSalePriceBOB)}</span>
+                        <span className="sale-bob">{formatBOB(calc.suggestedSalePriceBOB)}</span>
                       )}
                     </div>
                     <div className="profit-margin-row">
-                      <span className="margin-pill">+{item.item.targetMarginPercent}%</span>
+                      <span className="margin-pill">+{calc.item.targetMarginPercent}%</span>
                       <span className="profit-text">
-                        Ganancia: {currencyMode === 'usd' ? `+${formatUSD(item.unitProfitUSD)}` : `+${formatBOB(item.unitProfitBOB)}`}/ud
+                        Ganancia: {currencyMode === 'usd' ? `+${formatUSD(calc.unitProfitUSD)}` : `+${formatBOB(calc.unitProfitBOB)}`}/ud
                       </span>
                     </div>
                   </td>
@@ -317,7 +453,14 @@ export const ProductCostBreakdownTable: React.FC<ProductCostBreakdownTableProps>
          ========================================================================= */}
       <div className="breakdown-actions-bar">
         <div className="actions-bar-info">
-          {hasAnyOverrides ? (
+          {excludedCount > 0 ? (
+            <div className="status-chip active">
+              <EyeOff size={15} className="text-amber" />
+              <span>
+                <strong>Simulación Activa:</strong> {excludedCount} artículo{excludedCount > 1 ? 's' : ''} oculto{excludedCount > 1 ? 's' : ''}. Los cálculos reflejan la importación de los {products.length} artículos vigentes.
+              </span>
+            </div>
+          ) : hasAnyOverrides ? (
             <div className="status-chip active">
               <Sparkles size={15} className="text-amber" />
               <span>
@@ -335,7 +478,7 @@ export const ProductCostBreakdownTable: React.FC<ProductCostBreakdownTableProps>
             <div className="status-chip single-item">
               <Info size={15} className="text-muted" />
               <span>
-                La redistribución dinámica de costos se activará automáticamente cuando agregues <strong>2 o más artículos</strong>.
+                La redistribución dinámica de costos se activará automáticamente cuando haya <strong>2 o más artículos activos</strong>.
               </span>
             </div>
           )}

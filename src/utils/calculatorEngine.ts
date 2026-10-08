@@ -285,12 +285,19 @@ export function calculateSummary(
   // 5. Consolidación ($0 para Premium, $3 para Free members si consolidan)
   const myusConsolidationUSD = myus.membershipType === 'premium' ? 0.00 : (totalPackagesCount > 1 ? (Number(myus.consolidationFeeUSD) || 3.00) : 0.00);
 
+  // 6. Cargos adicionales personalizados MyUS (replicables: nombre + costo USD)
+  const customFeesList = (myus.customFees || []).filter(f => (f.name && f.name.trim() !== '') || (Number(f.amountUSD) || 0) > 0);
+  const myusCustomFeesTotalUSD = parseFloat(
+    customFeesList.reduce((acc, f) => acc + Math.max(0, Number(f.amountUSD) || 0), 0).toFixed(2)
+  );
+
   // Total Facturado por MyUS (entra en la base CIF para el IVA de Bolivia)
   const totalMyUSUSD = myusShippingUSD + 
     myusShippingPreferencesUSD + 
     myusPackageLevelUSD + 
     myusLithiumStickersUSD + 
-    myusConsolidationUSD;
+    myusConsolidationUSD + 
+    myusCustomFeesTotalUSD;
 
   // Base Imponible CIF en Bolivia = Compra en eBay (FOB) + Total MyUS
   const cifBaseUSD = totalFobUSD + totalMyUSUSD;
@@ -359,8 +366,8 @@ export function calculateSummary(
       }
     }
 
-    // Cargos de casillero y consolidación: por valor FOB
-    const proratedAdminMyUSUSD = (myusPackageLevelUSD + myusConsolidationUSD) * valueRatio;
+    // Cargos de casillero, consolidación y cargos adicionales MyUS: por valor FOB
+    const proratedAdminMyUSUSD = (myusPackageLevelUSD + myusConsolidationUSD + myusCustomFeesTotalUSD) * valueRatio;
 
     // Total MyUS para el producto (Courier MyUS queda vinculado al flete físico)
     const proratedMyUSUSD = proratedFreightUSD + proratedInsuranceUSD + proratedLithiumUSD + proratedAdminMyUSUSD;
@@ -642,6 +649,8 @@ export function calculateSummary(
     myusPackageLevelUSD,
     myusLithiumStickersUSD,
     myusConsolidationUSD,
+    myusCustomFeesTotalUSD,
+    myusCustomFees: customFeesList,
     totalMyUSUSD,
     cifBaseUSD,
     totalGaUSD,
@@ -703,7 +712,8 @@ export const DEFAULT_MYUS_CONFIG: MyUSConfig = {
   hasLithiumSticker: true, // Sticker de litio ($8.00)
   lithiumStickerUSD: 8.00,
   
-  consolidationFeeUSD: 0.00
+  consolidationFeeUSD: 0.00,
+  customFees: []
 };
 
 export const DEFAULT_BOLIVIA_CONFIG: BoliviaCustomsConfig = {

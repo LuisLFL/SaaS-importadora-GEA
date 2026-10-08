@@ -10,9 +10,16 @@ export interface ProductItem {
   gaPercent: number; // Gravamen Arancelario % (0% para tecnología y electrónica)
   targetMarginPercent: number; // Margen de utilidad comercial deseado (ej. 25%)
   hasLithiumBattery?: boolean; // Si contiene batería de litio (activa sticker de $8)
+  isExcluded?: boolean; // Si está marcado en el box para ocultar/excluir en la simulación What-If
 }
 
 export type MyUSShippingMethod = 'dhl_smallbox' | 'dhl_express' | 'budget_economy' | 'ups_expedited';
+
+export interface MyUSCustomFee {
+  id: string;
+  name: string; // Nombre del cargo adicional (ej. "Reempaque", "Fotos", "Almacenaje")
+  amountUSD: number; // Costo en dólares USD
+}
 
 export interface MyUSConfig {
   membershipType: 'premium' | 'free'; // Premium ($0 consolidación) vs Free ($3.00)
@@ -38,6 +45,9 @@ export interface MyUSConfig {
   lithiumStickerUSD: number; // $8.00
   
   consolidationFeeUSD: number;
+
+  // Cargos adicionales de MyUS replicables (nombre + costo en USD)
+  customFees?: MyUSCustomFee[];
 }
 
 export interface BoliviaCustomsConfig {
@@ -100,6 +110,8 @@ export interface CalculationSummary {
   myusPackageLevelUSD: number; // $8.99 por suite/esfuerzo extra
   myusLithiumStickersUSD: number; // $8.00 sticker litio
   myusConsolidationUSD: number;
+  myusCustomFeesTotalUSD?: number; // Total de cargos adicionales MyUS
+  myusCustomFees?: MyUSCustomFee[]; // Lista de cargos adicionales MyUS
   totalMyUSUSD: number;
   
   // Base Aduana Bolivia

@@ -225,6 +225,21 @@ export const ExecutiveSummaryTable: React.FC<ExecutiveSummaryTableProps> = ({
               </tr>
             )}
 
+            {summary.myusCustomFees && summary.myusCustomFees.length > 0 && summary.myusCustomFees.map(fee => (
+              <tr key={fee.id} className="sub-detail-row">
+                <td className="item-name-col">
+                  <span className="bullet-dot">•</span>
+                  <span>{fee.name || 'Cargo Adicional MyUS'}</span>
+                  <span className="item-store-tag">(Servicio extra)</span>
+                </td>
+                <td className="detail-desc-col">
+                  Cargo / servicio asociado configurado en MyUS
+                </td>
+                <td className="text-right number-col">{formatUSD(fee.amountUSD)}</td>
+                <td className="text-right number-col sub-bob-col">{formatBOB(fee.amountUSD * exchangeRate)}</td>
+              </tr>
+            ))}
+
             <tr className="subtotal-row pilar-2-subtotal">
               <td colSpan={2}>
                 <div className="subtotal-label-cell">

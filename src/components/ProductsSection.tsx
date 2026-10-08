@@ -5,7 +5,11 @@ import {
   Copy, 
   ShoppingBag, 
   Scale, 
-  Tag
+  Tag,
+  Eye,
+  EyeOff,
+  Check,
+  RotateCcw
 } from 'lucide-react';
 import type { ProductItem } from '../types/calculator';
 import { BOLIVIA_TARIFF_CATEGORIES, LBS_TO_KG } from '../utils/calculatorEngine';
@@ -20,6 +24,8 @@ interface ProductsSectionProps {
   onUpdateProduct: (id: string, updates: Partial<ProductItem>) => void;
   onRemoveProduct: (id: string) => void;
   onDuplicateProduct: (id: string) => void;
+  onToggleExcludeProduct: (id: string) => void;
+  onRestoreAllProducts: () => void;
 }
 
 export const ProductsSection: React.FC<ProductsSectionProps> = ({
@@ -28,14 +34,20 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
   onAddProduct,
   onUpdateProduct,
   onRemoveProduct,
-  onDuplicateProduct
+  onDuplicateProduct,
+  onToggleExcludeProduct,
+  onRestoreAllProducts
 }) => {
   const currentRate = exchangeRate || 12.26;
-  const totalFobUSD = products.reduce((acc, p) => acc + (p.quantity * p.unitPriceUSD || 0), 0);
+  const activeProducts = products.filter(p => !p.isExcluded);
+  const excludedProducts = products.filter(p => !!p.isExcluded);
+  const excludedCount = excludedProducts.length;
+
+  const totalFobUSD = activeProducts.reduce((acc, p) => acc + (p.quantity * p.unitPriceUSD || 0), 0);
   const totalFobBOB = totalFobUSD * currentRate;
-  const totalWeightLbs = products.reduce((acc, p) => acc + (p.quantity * p.unitWeightLbs || 0), 0);
+  const totalWeightLbs = activeProducts.reduce((acc, p) => acc + (p.quantity * p.unitWeightLbs || 0), 0);
   const totalWeightKg = totalWeightLbs * LBS_TO_KG;
-  const totalItems = products.reduce((acc, p) => acc + (p.quantity || 0), 0);
+  const totalItems = activeProducts.reduce((acc, p) => acc + (p.quantity || 0), 0);
 
   return (
     <div className="section-card">
@@ -45,14 +57,34 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
             <ShoppingBag size={20} />
           </div>
           <div>
-            <h2 className="section-title">1. Compras en eBay / Tiendas USA (Valor FOB)</h2>
+            <div className="section-title-row">
+              <h2 className="section-title">1. Compras en eBay / Tiendas USA (Valor FOB)</h2>
+              {excludedCount > 0 && (
+                <span className="section-status-chip sim-chip">
+                  <EyeOff size={13} />
+                  Simulación activa: {excludedCount} oculto{excludedCount > 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
             <p className="section-subtitle">
-              Ingresa los productos comprados. El valor FOB y el peso definirán la cuota de flete MyUS y los impuestos aduaneros.
+              Ingresa los productos comprados. Marca la casilla <strong>Ocultar</strong> en cualquier fila para simular cómo varía la importación sin ese producto.
             </p>
           </div>
         </div>
 
         <div className="section-header-actions">
+          {excludedCount > 0 && (
+            <button
+              type="button"
+              className="action-btn secondary-btn"
+              onClick={onRestoreAllProducts}
+              title="Restaurar todos los productos excluidos"
+            >
+              <RotateCcw size={15} />
+              <span>Restaurar todos ({products.length})</span>
+            </button>
+          )}
+
           <button 
             type="button" 
             className="action-btn primary-btn"
@@ -63,6 +95,28 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Banner de Notificación de Simulación What-If */}
+      {excludedCount > 0 && (
+        <div className="simulation-notice-bar">
+          <div className="simulation-notice-left">
+            <div className="simulation-pulse-icon">
+              <EyeOff size={15} />
+            </div>
+            <div className="simulation-notice-text">
+              <strong>Simulación What-If Activa:</strong> Se {excludedCount === 1 ? 'ha ocultado 1 producto' : `han ocultado ${excludedCount} productos`} del cálculo ({activeProducts.length} restantes activos). Todo el proceso logístico y arancelario se recalcula con los productos vigentes.
+            </div>
+          </div>
+          <button
+            type="button"
+            className="btn-restore-all-simulation"
+            onClick={onRestoreAllProducts}
+          >
+            <RotateCcw size={13} />
+            <span>Restaurar todos ({products.length})</span>
+          </button>
+        </div>
+      )}
 
       {products.length === 0 ? (
         <div className="empty-state-box">
@@ -82,13 +136,18 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
             <table className="custom-data-table">
               <thead>
                 <tr>
-                  <th style={{ width: '28%' }}>Producto / Descripción</th>
-                  <th style={{ width: '10%' }}>Cant.</th>
-                  <th style={{ width: '14%' }}>Precio FOB Unit.</th>
-                  <th style={{ width: '14%' }}>Peso Unit.</th>
+                  <th style={{ width: '6%', textAlign: 'center' }} title="Marcar box para ocultar este producto y recalcular los costos con los restantes">
+                    <div className="th-center-wrap">
+                      <span>Ocultar</span>
+                    </div>
+                  </th>
+                  <th style={{ width: '25%' }}>Producto / Descripción</th>
+                  <th style={{ width: '9%' }}>Cant.</th>
+                  <th style={{ width: '13%' }}>Precio FOB Unit.</th>
+                  <th style={{ width: '13%' }}>Peso Unit.</th>
                   <th style={{ width: '18%' }}>Categoría / GA % (Bolivia)</th>
-                  <th style={{ width: '10%' }}>Margen %</th>
-                  <th style={{ width: '6%', textAlign: 'center' }}>Acción</th>
+                  <th style={{ width: '9%' }}>Margen %</th>
+                  <th style={{ width: '7%', textAlign: 'center' }}>Acción</th>
                 </tr>
               </thead>
               <tbody>
@@ -98,9 +157,82 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
                   const weight = item.unitWeightLbs || 0;
                   const subtotalUSD = qty * price;
                   const itemTotalWeightLbs = qty * weight;
+                  const isExcluded = !!item.isExcluded;
 
+                  // Fila oculta / excluida de simulación
+                  if (isExcluded) {
+                    return (
+                      <tr key={item.id} className="product-row product-row-excluded">
+                        <td style={{ textAlign: 'center' }}>
+                          <label className="exclude-checkbox-label is-checked" title="Desmarcar box para incluir de nuevo en el cálculo">
+                            <input
+                              type="checkbox"
+                              checked={true}
+                              onChange={() => onToggleExcludeProduct(item.id)}
+                              className="exclude-checkbox-input"
+                            />
+                            <span className="exclude-custom-box is-checked">
+                              <Check size={12} strokeWidth={3} />
+                            </span>
+                          </label>
+                        </td>
+                        <td colSpan={6}>
+                          <div className="excluded-row-content">
+                            <div className="excluded-info-left">
+                              <span className="excluded-strikethrough-name">
+                                {item.name || `Producto #${index + 1}`}
+                              </span>
+                              <span className="excluded-chip">
+                                <EyeOff size={11} /> Oculto del cálculo
+                              </span>
+                            </div>
+                            <div className="excluded-info-right">
+                              <span className="excluded-meta-pill">
+                                {qty} ud{qty > 1 ? 's' : ''} • {formatUSD(subtotalUSD)} FOB • {itemTotalWeightLbs.toFixed(1)} lbs
+                              </span>
+                              <button
+                                type="button"
+                                className="btn-quick-reactivate"
+                                onClick={() => onToggleExcludeProduct(item.id)}
+                                title="Reactivar e incluir en el cálculo"
+                              >
+                                <Eye size={12} /> Reactivar
+                              </button>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <div className="row-actions justify-center">
+                            <button
+                              type="button"
+                              className="row-action-btn delete-btn"
+                              title="Eliminar producto definitivamente"
+                              onClick={() => onRemoveProduct(item.id)}
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  }
+
+                  // Fila normal activa
                   return (
                     <tr key={item.id} className="product-row">
+                      {/* Box Ocultar / Excluir */}
+                      <td style={{ textAlign: 'center' }}>
+                        <label className="exclude-checkbox-label" title="Marcar box para ocultar este producto y recalcular con los restantes">
+                          <input
+                            type="checkbox"
+                            checked={false}
+                            onChange={() => onToggleExcludeProduct(item.id)}
+                            className="exclude-checkbox-input"
+                          />
+                          <span className="exclude-custom-box" />
+                        </label>
+                      </td>
+
                       <td>
                         <div className="product-input-name-wrap">
                           <input
@@ -280,7 +412,52 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
               const subtotalUSD = qty * price;
               const itemTotalWeightLbs = qty * weight;
               const itemTotalWeightKg = itemTotalWeightLbs * LBS_TO_KG;
+              const isExcluded = !!item.isExcluded;
 
+              // Tarjeta compacta móvil para producto excluido
+              if (isExcluded) {
+                return (
+                  <div key={item.id} className="mobile-product-card mobile-card-excluded">
+                    <div className="mobile-excluded-inner">
+                      <div className="mobile-excluded-left">
+                        <label className="exclude-checkbox-label is-checked" title="Desmarcar box para reactivar">
+                          <input
+                            type="checkbox"
+                            checked={true}
+                            onChange={() => onToggleExcludeProduct(item.id)}
+                            className="exclude-checkbox-input"
+                          />
+                          <span className="exclude-custom-box is-checked">
+                            <Check size={12} strokeWidth={3} />
+                          </span>
+                        </label>
+                        <div>
+                          <span className="mobile-excluded-title">{item.name || `Ítem #${index + 1}`}</span>
+                          <span className="mobile-excluded-sub">Oculto del recálculo • {formatUSD(subtotalUSD)}</span>
+                        </div>
+                      </div>
+                      <div className="mobile-excluded-actions">
+                        <button
+                          type="button"
+                          className="btn-quick-reactivate"
+                          onClick={() => onToggleExcludeProduct(item.id)}
+                        >
+                          <Eye size={12} /> Reactivar
+                        </button>
+                        <button
+                          type="button"
+                          className="row-action-btn delete-btn"
+                          onClick={() => onRemoveProduct(item.id)}
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              // Tarjeta móvil activa
               return (
                 <div key={item.id} className="mobile-product-card">
                   {/* Header de la tarjeta */}
@@ -290,6 +467,14 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
                       {subtotalUSD > 0 && (
                         <span className="mobile-card-fob-tag">{formatUSD(subtotalUSD)}</span>
                       )}
+                      <label className="mobile-exclude-chip" title="Marcar box para ocultar de la simulación">
+                        <input
+                          type="checkbox"
+                          checked={false}
+                          onChange={() => onToggleExcludeProduct(item.id)}
+                        />
+                        <span>👁️ Ocultar</span>
+                      </label>
                     </div>
                     <div className="row-actions">
                       <button
@@ -487,7 +672,7 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
         <div className="summary-stat-chip">
           <Tag size={15} className="chip-icon" />
           <span className="chip-title">Total Artículos:</span>
-          <strong>{totalItems} uds. ({products.length} ítems)</strong>
+          <strong>{totalItems} uds. ({activeProducts.length} activos)</strong>
         </div>
 
         <div className="summary-stat-chip">
@@ -504,6 +689,14 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
             <span className="fob-bob-sub">({formatBOB(totalFobBOB)})</span>
           </div>
         </div>
+
+        {excludedCount > 0 && (
+          <div className="summary-stat-chip sim-active-chip">
+            <EyeOff size={15} className="chip-icon text-amber" />
+            <span className="chip-title">Simulación:</span>
+            <strong>{excludedCount} excluido{excludedCount > 1 ? 's' : ''}</strong>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -9,6 +9,8 @@ import { ProductCostBreakdownTable } from './components/ProductCostBreakdownTabl
 import { SavedQuotesModal } from './components/SavedQuotesModal';
 import { PrintReportView } from './components/PrintReportView';
 import { ExecutiveSummaryTable } from './components/ExecutiveSummaryTable';
+import { FloatingSummaryTable } from './components/FloatingSummaryTable';
+import { ScrollToTopButton } from './components/ScrollToTopButton';
 
 import type { 
   ProductItem, 
@@ -105,10 +107,27 @@ export const App: React.FC = () => {
     localStorage.setItem('gea_saved_quotations_list', JSON.stringify(savedQuotes));
   }, [savedQuotes]);
 
+  // Filtro de productos activos para la simulación What-If
+  const activeProducts = useMemo(() => {
+    return products.filter(p => !p.isExcluded);
+  }, [products]);
+
+  const excludedCount = products.length - activeProducts.length;
+
   // Cálculo reactivo en tiempo real de todo el modelo financiero con soporte de redistribución
+  // Recalcula exclusivamente con los productos vigentes (no excluidos)
   const summary = useMemo(() => {
-    return calculateSummary(products, myusConfig, customsConfig, customProration);
-  }, [products, myusConfig, customsConfig, customProration]);
+    return calculateSummary(activeProducts, myusConfig, customsConfig, customProration);
+  }, [activeProducts, myusConfig, customsConfig, customProration]);
+
+  // Manejo de simulación What-If: Ocultar/Excluir producto y Restaurar
+  const handleToggleExcludeProduct = (id: string) => {
+    setProducts(prev => prev.map(p => (p.id === id ? { ...p, isExcluded: !p.isExcluded } : p)));
+  };
+
+  const handleRestoreAllProducts = () => {
+    setProducts(prev => prev.map(p => ({ ...p, isExcluded: false })));
+  };
 
   // Manejo de redistribución de costos
   const handleUpdateTaxOverride = (productId: string, unitVal: number) => {
@@ -298,6 +317,17 @@ export const App: React.FC = () => {
         />
       </div>
 
+      {/* Minita tabla flotante fija en la esquina superior derecha */}
+      <FloatingSummaryTable
+        summary={summary}
+        exchangeRate={customsConfig.exchangeRate}
+        currencyMode={currencyMode}
+        totalProductsCount={products.length}
+        activeProductsCount={activeProducts.length}
+        excludedCount={excludedCount}
+        onRestoreAllProducts={handleRestoreAllProducts}
+      />
+
       {/* Contenedor Principal de la Aplicación */}
       <main className="main-content-container screen-only-wrapper">
         {/* Transformador de Dólar (USD ⇄ BOB) */}
@@ -306,7 +336,7 @@ export const App: React.FC = () => {
           onExchangeRateChange={handleExchangeRateChange}
         />
 
-        {/* 1. Compras en eBay / Valor FOB */}
+        {/* 1. Compras en eBay / Valor FOB (Tabla Inicial con Simulación) */}
         <ProductsSection
           products={products}
           exchangeRate={customsConfig.exchangeRate}
@@ -315,6 +345,8 @@ export const App: React.FC = () => {
           onUpdateProduct={handleUpdateProduct}
           onRemoveProduct={handleRemoveProduct}
           onDuplicateProduct={handleDuplicateProduct}
+          onToggleExcludeProduct={handleToggleExcludeProduct}
+          onRestoreAllProducts={handleRestoreAllProducts}
         />
 
         {/* Bloque de Dos Columnas: MyUS y Liquidación Bolivia */}
@@ -340,7 +372,7 @@ export const App: React.FC = () => {
 
         {/* 3.5 Resumen Maestro: Los 3 Pilares y Sumatoria Final */}
         <ExecutiveSummaryTable
-          products={products}
+          products={activeProducts}
           summary={summary}
           exchangeRate={customsConfig.exchangeRate}
           currencyMode={currencyMode}
@@ -352,9 +384,10 @@ export const App: React.FC = () => {
           exchangeRate={customsConfig.exchangeRate}
         />
 
-        {/* 5. Prorrateo y Precios de Venta Unitarios */}
+        {/* 5. Prorrateo y Precios de Venta Unitarios (Tabla Final con Simulación) */}
         <ProductCostBreakdownTable
           products={summary.products}
+          allProducts={products}
           exchangeRate={customsConfig.exchangeRate}
           currencyMode={currencyMode}
           customProration={customProration}
@@ -363,6 +396,8 @@ export const App: React.FC = () => {
           onClearTaxOverride={handleClearTaxOverride}
           onClearDhlOverride={handleClearDhlOverride}
           onResetAllOverrides={handleResetAllOverrides}
+          onToggleExcludeProduct={handleToggleExcludeProduct}
+          onRestoreAllProducts={handleRestoreAllProducts}
           totalCustomsTaxesUSD={summary.totalCustomsTaxesUSD}
           totalDhlHandlingUSD={summary.dhlHandlingUSD}
         />
@@ -376,6 +411,8 @@ export const App: React.FC = () => {
         onLoadQuote={handleLoadQuote}
         onDeleteQuote={handleDeleteQuote}
       />
+      {/* Botón flotante para subir rápidamente a la parte superior */}
+      <ScrollToTopButton />
     </div>
   );
 };
