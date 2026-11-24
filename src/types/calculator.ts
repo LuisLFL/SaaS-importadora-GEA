@@ -51,9 +51,13 @@ export interface MyUSConfig {
 }
 
 export interface BoliviaCustomsConfig {
-  exchangeRate: number; // BOB por USD (ej. 12.26)
+  exchangeRate: number; // BOB por USD (ej. 12.20)
   ivaRate: number; // 14.94% efectiva
-  dhlHandlingFeeUSD: number; // $40.00 USD
+  taxesMode: 'auto' | 'manual'; // auto = GA+IVA teórico | manual = monto real facturado por DHL
+  manualTaxesBOB: number; // Impuestos reales cobrados en Bs (solo modo manual)
+  dhlHandlingFeeUSD: number; // Cargo USD adicional (opcional / legado)
+  levyChargesBOB: number; // Cargos "levy" de DHL en Bs
+  customsReleaseFeeBOB: number; // Servicio de liberación de aduana DHL en Bs
   otherCustomsFeesBOB: number;
 }
 

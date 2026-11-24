@@ -45,7 +45,7 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
           <span className="rep-sub">{formatBOB(summary.totalCustomsTaxesUSD * (Number(customsConfig.exchangeRate) || 12.26))}</span>
         </div>
         <div className="rep-box">
-          <span className="rep-label">Manejo DHL Bolivia</span>
+          <span className="rep-label">Cargos DHL Bolivia</span>
           <span className="rep-val">{formatUSD(summary.dhlHandlingUSD)}</span>
           <span className="rep-sub">{formatBOB(summary.dhlHandlingUSD * (Number(customsConfig.exchangeRate) || 12.26))}</span>
         </div>

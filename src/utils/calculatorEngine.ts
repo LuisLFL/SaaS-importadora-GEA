@@ -302,8 +302,13 @@ export function calculateSummary(
   // Base Imponible CIF en Bolivia = Compra en eBay (FOB) + Total MyUS
   const cifBaseUSD = totalFobUSD + totalMyUSUSD;
 
-  const dhlHandlingUSD = Math.max(0, Number(customs.dhlHandlingFeeUSD) || 0);
-  const customsRate = Number(customs.exchangeRate) || 12.26;
+  const customsRate = Number(customs.exchangeRate) || 12.20;
+  // Cargos DHL: levy + servicio de liberación de aduana (en Bs) + cargo USD adicional legado
+  const levyUSD = (Number(customs.levyChargesBOB) || 0) / customsRate;
+  const releaseUSD = (Number(customs.customsReleaseFeeBOB) || 0) / customsRate;
+  const dhlHandlingUSD = parseFloat(
+    (Math.max(0, Number(customs.dhlHandlingFeeUSD) || 0) + levyUSD + releaseUSD).toFixed(2)
+  );
   const otherFeesUSD = (Number(customs.otherCustomsFeesBOB) || 0) / customsRate;
 
   // =========================================================================
@@ -412,6 +417,27 @@ export function calculateSummary(
       proratedOtherUSD
     };
   });
+
+  // =========================================================================
+  // 1.5. IMPUESTOS EN MODO MANUAL (monto real facturado por DHL en Bs)
+  // Si el usuario conoce el monto real de tributos pagados, se usa ese total
+  // y se prorratea por base CIF (valor) de cada producto, en lugar del teórico
+  // GA + IVA 14.94%.
+  // =========================================================================
+  const taxesMode = customs.taxesMode || 'manual';
+  if (taxesMode === 'manual') {
+    const totalCifBase = baseItems.reduce((acc, b) => acc + b.itemCifUSD, 0);
+    const targetTaxUSD = Math.max(0, Number(customs.manualTaxesBOB) || 0) / customsRate;
+    baseItems.forEach((b) => {
+      const share = totalCifBase > 0
+        ? b.itemCifUSD / totalCifBase
+        : (baseItems.length > 0 ? 1 / baseItems.length : 0);
+      const allocTax = targetTaxUSD * share;
+      b.baseGaUSD = 0;
+      b.baseIvaUSD = allocTax;
+      b.baseTaxUSD = allocTax;
+    });
+  }
 
   // =========================================================================
   // 2. REDISTRIBUCIÓN DINÁMICA DE COSTOS (ACTIVABLE SOLO CON 2 O MÁS ARTÍCULOS)
@@ -676,49 +702,99 @@ export function calculateSummary(
   };
 }
 
-// Ejemplo calibrado exactamente con la captura oficial de MyUS del usuario (5 lbs -> $31.14 Smallbox / $38.13 DHL Express)
+// Caso real calibrado con la factura de MyUS + DHL Bolivia del usuario.
+// FOB en USD equivalente a los precios pagados en eBay (a 12.20 Bs/USD):
+//   Dell 5400 i7 = 1.035,30 Bs · Dell 5420 i5 = 1.038,83 Bs
+//   Quadro K4200 = 316,69 Bs · Xeon E5-2680 = 220,74 Bs
 export const SAMPLE_PRODUCTS: ProductItem[] = [
   {
     id: 'prod-1',
-    name: 'Dispositivo Electrónico con Batería (eBay)',
-    sellerOrStore: 'eBay Top Rated Seller',
+    name: 'Dell Latitude 5400 — i7-8665U',
+    sellerOrStore: 'eBay',
     quantity: 1,
-    unitPriceUSD: 100.00, // $100 -> Seguro $3.50 exactos
-    unitWeightLbs: 5.0, // 5.0 lbs -> DHL Smallbox $31.14 USD / DHL Express $38.13 USD
+    unitPriceUSD: 84.8607, // 1.035,30 Bs / 12.20
+    unitWeightLbs: 4.25,
     packageCount: 1,
     category: 'electronics_exempt',
-    gaPercent: 0, // 0% GA para tecnología
+    gaPercent: 0,
     targetMarginPercent: 25,
-    hasLithiumBattery: true // Activa el sticker de litio de $8.00
+    hasLithiumBattery: true
+  },
+  {
+    id: 'prod-2',
+    name: 'Dell Latitude 5420 — i5-1135G7',
+    sellerOrStore: 'eBay',
+    quantity: 1,
+    unitPriceUSD: 85.15, // 1.038,83 Bs / 12.20
+    unitWeightLbs: 4.20,
+    packageCount: 1,
+    category: 'electronics_exempt',
+    gaPercent: 0,
+    targetMarginPercent: 25,
+    hasLithiumBattery: true
+  },
+  {
+    id: 'prod-3',
+    name: 'NVIDIA Quadro K4200',
+    sellerOrStore: 'eBay',
+    quantity: 1,
+    unitPriceUSD: 25.9582, // 316,69 Bs / 12.20
+    unitWeightLbs: 1.90,
+    packageCount: 1,
+    category: 'electronics_exempt',
+    gaPercent: 0,
+    targetMarginPercent: 25,
+    hasLithiumBattery: false
+  },
+  {
+    id: 'prod-4',
+    name: 'Intel Xeon E5-2680',
+    sellerOrStore: 'eBay',
+    quantity: 1,
+    unitPriceUSD: 18.0934, // 220,74 Bs / 12.20
+    unitWeightLbs: 0.30,
+    packageCount: 1,
+    category: 'electronics_exempt',
+    gaPercent: 0,
+    targetMarginPercent: 25,
+    hasLithiumBattery: false
   }
 ];
 
+// Calibrado con la factura real de MyUS:
+//   Shipping Charges 86.22 · 15% Off -12.93 · Enhanced Liability 7.00 · Lithium 8.00 = 88.29 USD
 export const DEFAULT_MYUS_CONFIG: MyUSConfig = {
   membershipType: 'premium',
-  shippingMethod: 'dhl_smallbox',
-  autoCalculateShipping: true,
-  shippingChargeUSD: 31.14,
-  
-  discountPercent: 0, // Descuento porcentual (0 - 100%)
-  discountCreditUSD: 0, // Descuento en crédito de cuenta en USD ($)
-  
-  insurancePer100RateUSD: 3.50, // $3.50 por cada $100 USD de producto
-  useCustomShippingPreferences: false,
-  customShippingPreferencesUSD: 3.50,
-  
-  hasPackageLevelCharges: true, // Castigo por no haber puesto bien el casillero ($8.99)
+  shippingMethod: 'dhl_express',
+  autoCalculateShipping: false,
+  shippingChargeUSD: 86.22,
+
+  discountPercent: 15, // 15% Off observado en la factura real
+  discountCreditUSD: 0,
+
+  insurancePer100RateUSD: 3.50,
+  useCustomShippingPreferences: true,
+  customShippingPreferencesUSD: 7.00, // Enhanced Liability Protection real
+
+  hasPackageLevelCharges: false,
   packageLevelChargesUSD: 8.99,
-  
-  hasLithiumSticker: true, // Sticker de litio ($8.00)
+
+  hasLithiumSticker: true,
   lithiumStickerUSD: 8.00,
-  
+
   consolidationFeeUSD: 0.00,
   customFees: []
 };
 
+// Calibrado con la liquidación real de DHL Bolivia:
+//   Impuestos 468 Bs · Levy charges 360 Bs · Liberación de aduana 61 Bs = 889 Bs
 export const DEFAULT_BOLIVIA_CONFIG: BoliviaCustomsConfig = {
-  exchangeRate: 12.26, // Dólar fijado en 12.26 Bs.
-  ivaRate: 14.94, // 14.94% fija legal
-  dhlHandlingFeeUSD: 40.00, // $40 USD de manejo DHL
+  exchangeRate: 12.20, // Tipo de cambio real de la operación (1.077,14 / 88,29)
+  ivaRate: 14.94,
+  taxesMode: 'manual',
+  manualTaxesBOB: 468.00,
+  dhlHandlingFeeUSD: 0.00,
+  levyChargesBOB: 360.00,
+  customsReleaseFeeBOB: 61.00,
   otherCustomsFeesBOB: 0.00
 };

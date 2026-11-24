@@ -22,8 +22,10 @@ export const BoliviaCustomsSection: React.FC<BoliviaCustomsSectionProps> = ({
   exchangeRate,
   onUpdateCustoms
 }) => {
-  const dhlUSD = customsConfig.dhlHandlingFeeUSD ?? 40.0;
+  const taxesMode = customsConfig.taxesMode ?? 'manual';
+  const dhlUSD = summary.dhlHandlingUSD ?? 0;
   const dhlBOB = dhlUSD * exchangeRate;
+  const totalLandedBOB = (summary.totalCustomsTaxesUSD + dhlUSD) * exchangeRate;
 
   return (
     <div className="section-card customs-card">
@@ -34,11 +36,11 @@ export const BoliviaCustomsSection: React.FC<BoliviaCustomsSectionProps> = ({
           </div>
           <div>
             <div className="customs-title-row">
-              <h2 className="section-title">3. Liquidación Aduanera & Manejo DHL Bolivia</h2>
+              <h2 className="section-title">3. Liquidación Aduanera & Cargos DHL Bolivia</h2>
               <span className="customs-tag">Aduana Nacional de Bolivia (ANB)</span>
             </div>
             <p className="section-subtitle">
-              Cálculo de la Base Imponible CIF Frontera, Gravamen Arancelario, IVA Efectivo (14.94%) y Tasa fija DHL ($40 USD).
+              Base Imponible CIF, Gravamen Arancelario, impuestos de importación e importes reales de DHL (levy + liberación de aduana).
             </p>
           </div>
         </div>
@@ -94,37 +96,70 @@ export const BoliviaCustomsSection: React.FC<BoliviaCustomsSectionProps> = ({
           </div>
         </div>
 
-        {/* IVA Importación Bolivia (14.94%) */}
+        {/* Impuestos de Importación (auto 14.94% o monto real) */}
         <div className="customs-metric-card highlight-card">
           <div className="customs-card-top">
             <div className="metric-title-group">
               <Receipt size={18} className="metric-icon iva-icon" />
               <div>
-                <h4>IVA Efectivo de Importación</h4>
-                <p>14.94% aplicado sobre (Base CIF + GA)</p>
+                <h4>Impuestos de Importación</h4>
+                <p>{taxesMode === 'auto' ? 'GA + IVA 14.94% sobre CIF' : 'Monto real facturado por DHL'}</p>
               </div>
             </div>
-            <span className="tax-badge legal-badge">14.94% Fijo</span>
+            <span className="tax-badge legal-badge">
+              {taxesMode === 'auto' ? '14.94% Auto' : 'Real (Bs.)'}
+            </span>
           </div>
 
           <div className="metric-amount-row">
-            <div className="main-metric-val">{formatUSD(summary.totalIvaUSD)}</div>
-            <div className="sub-metric-val">{formatBOB(summary.totalIvaUSD * exchangeRate)}</div>
+            <div className="main-metric-val">{formatUSD(summary.totalCustomsTaxesUSD)}</div>
+            <div className="sub-metric-val">{formatBOB(summary.totalCustomsTaxesUSD * exchangeRate)}</div>
           </div>
 
+          <label className="metric-note" style={{ cursor: 'pointer', gap: '0.4rem', display: 'flex', alignItems: 'center' }}>
+            <input
+              type="checkbox"
+              checked={taxesMode === 'manual'}
+              onChange={(e) => onUpdateCustoms({ taxesMode: e.target.checked ? 'manual' : 'auto' })}
+            />
+            <span>Usar monto real pagado (Bs.)</span>
+          </label>
+
+          {taxesMode === 'manual' && (
+            <div className="dhl-input-row">
+              <div className="input-with-currency large-input">
+                <span className="currency-symbol">Bs.</span>
+                <NumericInput
+                  min={0}
+                  fallbackOnBlur={0}
+                  allowDecimals={true}
+                  value={customsConfig.manualTaxesBOB ?? 0}
+                  onValueChange={(val) => onUpdateCustoms({ manualTaxesBOB: val })}
+                  className="table-input"
+                  placeholder="0"
+                />
+                <span className="input-unit">BOB</span>
+              </div>
+            </div>
+          )}
+
           <div className="metric-note">
-            <span>Base imponible tributaria: {formatUSD(summary.cifBaseUSD + summary.totalGaUSD)}</span>
+            <span>
+              {taxesMode === 'auto'
+                ? `Base imponible tributaria: ${formatUSD(summary.cifBaseUSD + summary.totalGaUSD)}`
+                : `Prorrateado por valor CIF entre ${summary.products.length} producto(s).`}
+            </span>
           </div>
         </div>
 
-        {/* Manejo DHL ($40 USD) */}
+        {/* Cargos DHL (levy + liberación de aduana) */}
         <div className="customs-metric-card dhl-card">
           <div className="customs-card-top">
             <div className="metric-title-group">
               <Truck size={18} className="metric-icon dhl-icon" />
               <div>
-                <h4>Tasa de Manejo DHL Bolivia</h4>
-                <p>Desaduanamiento y entrega local de courier</p>
+                <h4>Cargos DHL Bolivia</h4>
+                <p>Levy charges + servicio de liberación de aduana</p>
               </div>
             </div>
             <span className="dhl-badge">Courier Fee</span>
@@ -132,25 +167,42 @@ export const BoliviaCustomsSection: React.FC<BoliviaCustomsSectionProps> = ({
 
           <div className="dhl-input-row">
             <div className="input-with-currency large-input">
-              <span className="currency-symbol">$</span>
+              <span className="currency-symbol">Bs.</span>
               <NumericInput
                 min={0}
                 fallbackOnBlur={0}
                 allowDecimals={true}
-                value={customsConfig.dhlHandlingFeeUSD}
-                onValueChange={(val) => onUpdateCustoms({ dhlHandlingFeeUSD: val })}
+                value={customsConfig.levyChargesBOB ?? 0}
+                onValueChange={(val) => onUpdateCustoms({ levyChargesBOB: val })}
                 className="table-input"
-                placeholder="40"
+                placeholder="0"
               />
-              <span className="input-unit">USD</span>
-            </div>
-            <div className="dhl-bob-equivalent">
-              ≈ <strong>{formatBOB(dhlBOB)}</strong>
+              <span className="input-unit">BOB · Levy</span>
             </div>
           </div>
 
+          <div className="dhl-input-row">
+            <div className="input-with-currency large-input">
+              <span className="currency-symbol">Bs.</span>
+              <NumericInput
+                min={0}
+                fallbackOnBlur={0}
+                allowDecimals={true}
+                value={customsConfig.customsReleaseFeeBOB ?? 0}
+                onValueChange={(val) => onUpdateCustoms({ customsReleaseFeeBOB: val })}
+                className="table-input"
+                placeholder="0"
+              />
+              <span className="input-unit">BOB · Liberación</span>
+            </div>
+          </div>
+
+          <div className="dhl-bob-equivalent">
+            Total DHL ≈ <strong>{formatBOB(dhlBOB)}</strong> ({formatUSD(dhlUSD)})
+          </div>
+
           <div className="metric-note">
-            <span>Tasa fija estándar cobrada por DHL en Bolivia por trámite de aduana.</span>
+            <span>Levvy charges y liberación de aduana cobrados por DHL, prorrateados por peso.</span>
           </div>
         </div>
       </div>
@@ -159,12 +211,12 @@ export const BoliviaCustomsSection: React.FC<BoliviaCustomsSectionProps> = ({
       <div className="customs-summary-strip">
         <div className="customs-summary-left">
           <div className="tax-breakdown-item">
-            <span className="tax-item-label">Total Impuestos Aduana (GA + IVA):</span>
+            <span className="tax-item-label">Total Impuestos Aduana:</span>
             <strong className="tax-item-val">{formatUSD(summary.totalCustomsTaxesUSD)} ({formatBOB(summary.totalCustomsTaxesUSD * exchangeRate)})</strong>
           </div>
           <span className="separator">•</span>
           <div className="tax-breakdown-item">
-            <span className="tax-item-label">Manejo DHL:</span>
+            <span className="tax-item-label">Cargos DHL:</span>
             <strong className="tax-item-val">{formatUSD(dhlUSD)} ({formatBOB(dhlBOB)})</strong>
           </div>
         </div>
@@ -173,7 +225,7 @@ export const BoliviaCustomsSection: React.FC<BoliviaCustomsSectionProps> = ({
           <span className="customs-total-label">Total Liquidación Bolivia:</span>
           <div className="customs-grand-total">
             <span className="total-usd">{formatUSD(summary.totalCustomsTaxesUSD + dhlUSD)}</span>
-            <span className="total-bob">({formatBOB((summary.totalCustomsTaxesUSD + dhlUSD) * exchangeRate)})</span>
+            <span className="total-bob">({formatBOB(totalLandedBOB)})</span>
           </div>
         </div>
       </div>

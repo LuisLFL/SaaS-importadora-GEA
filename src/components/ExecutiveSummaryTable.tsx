@@ -290,10 +290,10 @@ export const ExecutiveSummaryTable: React.FC<ExecutiveSummaryTableProps> = ({
             <tr className="sub-detail-row">
               <td className="item-name-col">
                 <span className="bullet-dot">•</span>
-                <span>Tasa de Manejo y Despacho DHL Bolivia</span>
+                <span>Cargos DHL Bolivia (levy + liberación)</span>
               </td>
               <td className="detail-desc-col">
-                Cargo fijo de desaduanamiento courier en Bolivia
+                Levvy charges y servicio de liberación de aduana
               </td>
               <td className="text-right number-col">{formatUSD(summary.dhlHandlingUSD)}</td>
               <td className="text-right number-col sub-bob-col">{formatBOB(summary.dhlHandlingUSD * exchangeRate)}</td>

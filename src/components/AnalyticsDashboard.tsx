@@ -141,7 +141,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
           <div 
             className="bar-segment seg-dhl" 
             style={{ width: `${Math.max(1, dhlPercent)}%` }}
-            title={`Manejo DHL ($40): ${formatUSD(summary.dhlHandlingUSD)} (${dhlPercent.toFixed(1)}%)`}
+            title={`Cargos DHL (levy + liberación): ${formatUSD(summary.dhlHandlingUSD)} (${dhlPercent.toFixed(1)}%)`}
           />
         </div>
 
@@ -166,7 +166,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
           </div>
           <div className="legend-item">
             <span className="dot dot-dhl" />
-            <span className="legend-name">Manejo DHL:</span>
+            <span className="legend-name">Cargos DHL:</span>
             <span className="legend-val">{dhlPercent.toFixed(1)}%</span>
             <span className="legend-amount">({formatUSD(summary.dhlHandlingUSD)})</span>
           </div>
