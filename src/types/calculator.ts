@@ -55,7 +55,7 @@ export interface BoliviaCustomsConfig {
   ivaRate: number; // 14.94% efectiva
   taxesMode: 'auto' | 'manual'; // auto = GA+IVA teórico | manual = monto real facturado por DHL
   manualTaxesBOB: number; // Impuestos reales cobrados en Bs (solo modo manual)
-  dhlHandlingFeeUSD: number; // Cargo USD adicional (opcional / legado)
+  dhlHandlingFeeBOB: number; // Tasa base de manejo DHL en Bs (se convierte con el tipo de cambio)
   levyChargesBOB: number; // Cargos "levy" de DHL en Bs
   customsReleaseFeeBOB: number; // Servicio de liberación de aduana DHL en Bs
   otherCustomsFeesBOB: number;

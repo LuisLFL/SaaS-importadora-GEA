@@ -303,12 +303,13 @@ export function calculateSummary(
   const cifBaseUSD = totalFobUSD + totalMyUSUSD;
 
   const customsRate = Number(customs.exchangeRate) || 12.20;
-  // Cargos DHL: levy + servicio de liberación de aduana (en Bs) + cargo USD adicional legado
-  const levyUSD = (Number(customs.levyChargesBOB) || 0) / customsRate;
-  const releaseUSD = (Number(customs.customsReleaseFeeBOB) || 0) / customsRate;
-  const dhlHandlingUSD = parseFloat(
-    (Math.max(0, Number(customs.dhlHandlingFeeUSD) || 0) + levyUSD + releaseUSD).toFixed(2)
-  );
+  // Cargos DHL: tasa base de manejo + levy + liberación de aduana, todos en Bs,
+  // convertidos a USD con el tipo de cambio vigente.
+  const dhlBaseBOB = Math.max(0, Number(customs.dhlHandlingFeeBOB) || 0);
+  const dhlTotalBOB = dhlBaseBOB +
+    Math.max(0, Number(customs.levyChargesBOB) || 0) +
+    Math.max(0, Number(customs.customsReleaseFeeBOB) || 0);
+  const dhlHandlingUSD = parseFloat((dhlTotalBOB / customsRate).toFixed(2));
   const otherFeesUSD = (Number(customs.otherCustomsFeesBOB) || 0) / customsRate;
 
   // =========================================================================
@@ -746,15 +747,14 @@ export const DEFAULT_MYUS_CONFIG: MyUSConfig = {
 };
 
 // Configuración de aduana por defecto en modo AUTOMÁTICO:
-// GA + IVA 14.94% calculados, y tasa base de manejo DHL $40.
-// (Los campos de levy/liberación y el modo manual quedan disponibles para
-// cargar una liquidación real cuando el usuario la conozca.)
+// GA + IVA 14.94% calculados. Los cargos DHL se expresan en Bs
+// (tasa base + levy + liberación) y se convierten con el tipo de cambio.
 export const DEFAULT_BOLIVIA_CONFIG: BoliviaCustomsConfig = {
   exchangeRate: 12.26,
   ivaRate: 14.94,
   taxesMode: 'auto',
   manualTaxesBOB: 0.00,
-  dhlHandlingFeeUSD: 40.00,
+  dhlHandlingFeeBOB: 0.00,
   levyChargesBOB: 0.00,
   customsReleaseFeeBOB: 0.00,
   otherCustomsFeesBOB: 0.00

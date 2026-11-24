@@ -109,11 +109,14 @@ El Quadro pesa **6,3× más** que el Xeon y absorbe mucho más costo logístico.
 ## 8. Cómo funciona en la página (app)
 
 - La app calcula en **modo automático** por defecto: flete por peso (TruePrice por método),
-  seguro $3.50/$100, IVA 14.94% sobre CIF, GA según partida y tasa base de manejo DHL ($40).
-- Los **valores reales de este documento** se pueden reproducir cuando se conozcan, usando:
+  seguro $3.50/$100, IVA 14.94% sobre CIF y GA según partida.
+- **Cargos DHL en Bs:** tasa base de manejo + levy + liberación de aduana se ingresan en
+  **bolivianos** y se convierten a USD con el **tipo de cambio** vigente (ej. 421 Bs a 12 Bs/USD
+  = ≈35,08 USD). Ya no hay un $40 fijo en dólares.
+- Los **valores reales de este documento** se reproducen cuando se conozcan, usando:
   - MyUS: desactivar "auto" e ingresar flete/seguro reales.
   - Aduana: activar **"Usar monto real pagado"** e ingresar impuestos reales (Bs).
-  - DHL: ingresar **levy** y **liberación de aduana** (Bs) además de la tasa base.
+  - DHL: ingresar **manejo + levy + liberación** (Bs) al tipo de cambio de la operación.
 - No quedan valores fijos bloqueados: cualquier cambio de precio, peso, cantidad o margen
   recalcula todo en vivo.
-- Persistencia migrada a **v5** para que apliquen los defaults automáticos.
+- Persistencia migrada a **v6** para que apliquen los defaults automáticos.

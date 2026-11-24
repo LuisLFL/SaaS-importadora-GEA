@@ -167,17 +167,17 @@ export const BoliviaCustomsSection: React.FC<BoliviaCustomsSectionProps> = ({
 
           <div className="dhl-input-row">
             <div className="input-with-currency large-input">
-              <span className="currency-symbol">$</span>
+              <span className="currency-symbol">Bs.</span>
               <NumericInput
                 min={0}
                 fallbackOnBlur={0}
                 allowDecimals={true}
-                value={customsConfig.dhlHandlingFeeUSD ?? 0}
-                onValueChange={(val) => onUpdateCustoms({ dhlHandlingFeeUSD: val })}
+                value={customsConfig.dhlHandlingFeeBOB ?? 0}
+                onValueChange={(val) => onUpdateCustoms({ dhlHandlingFeeBOB: val })}
                 className="table-input"
-                placeholder="40"
+                placeholder="0"
               />
-              <span className="input-unit">USD · Manejo</span>
+              <span className="input-unit">BOB · Manejo</span>
             </div>
           </div>
 
