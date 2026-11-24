@@ -106,12 +106,14 @@ El Quadro pesa **6,3× más** que el Xeon y absorbe mucho más costo logístico.
 
 ---
 
-## 8. Cambios aplicados a la página (app)
+## 8. Cómo funciona en la página (app)
 
-- **Defaults** de MyUS calibrados: flete 86,22 USD, 15% Off, seguro 7,00 USD, litio 8,00 USD,
-  sin cargo de casillero → Total 88,29 USD.
-- **Aduana DHL** ahora modelada con **impuestos reales (Bs) + levy + liberación de aduana (Bs)**,
-  con toggle **Auto (14,94%) / Real**. Impuestos por valor, cargos DHL por peso.
-- **Tipo de cambio** por defecto: **12,20**.
-- **Productos de ejemplo** actualizados al caso real (pesos corregidos: Quadro 1,90 lb, Xeon 0,30 lb).
-- Persistencia migrada a **v4** para que apliquen los nuevos valores.
+- La app calcula en **modo automático** por defecto: flete por peso (TruePrice por método),
+  seguro $3.50/$100, IVA 14.94% sobre CIF, GA según partida y tasa base de manejo DHL ($40).
+- Los **valores reales de este documento** se pueden reproducir cuando se conozcan, usando:
+  - MyUS: desactivar "auto" e ingresar flete/seguro reales.
+  - Aduana: activar **"Usar monto real pagado"** e ingresar impuestos reales (Bs).
+  - DHL: ingresar **levy** y **liberación de aduana** (Bs) además de la tasa base.
+- No quedan valores fijos bloqueados: cualquier cambio de precio, peso, cantidad o margen
+  recalcula todo en vivo.
+- Persistencia migrada a **v5** para que apliquen los defaults automáticos.

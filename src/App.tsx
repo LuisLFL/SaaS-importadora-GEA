@@ -29,7 +29,7 @@ import {
 export const App: React.FC = () => {
   // Estado de Productos
   const [products, setProducts] = useState<ProductItem[]>(() => {
-    const saved = localStorage.getItem('gea_current_products_v4');
+    const saved = localStorage.getItem('gea_current_products_v5');
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -42,7 +42,7 @@ export const App: React.FC = () => {
 
   // Estado de MyUS
   const [myusConfig, setMyusConfig] = useState<MyUSConfig>(() => {
-    const saved = localStorage.getItem('gea_current_myus_v4');
+    const saved = localStorage.getItem('gea_current_myus_v5');
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -55,7 +55,7 @@ export const App: React.FC = () => {
 
   // Estado de Aduana Bolivia y Tasa de Cambio (12.26 Bs por defecto)
   const [customsConfig, setCustomsConfig] = useState<BoliviaCustomsConfig>(() => {
-    const saved = localStorage.getItem('gea_current_customs_v4');
+    const saved = localStorage.getItem('gea_current_customs_v5');
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -68,7 +68,7 @@ export const App: React.FC = () => {
 
   // Estado de Prorrateo Personalizado (Redistribución manual de Impuestos y DHL)
   const [customProration, setCustomProration] = useState<CustomProrationOverrides>(() => {
-    const saved = localStorage.getItem('gea_current_proration_v4');
+    const saved = localStorage.getItem('gea_current_proration_v5');
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -96,10 +96,10 @@ export const App: React.FC = () => {
 
   // Auto-guardado de la sesión actual
   useEffect(() => {
-    localStorage.setItem('gea_current_products_v4', JSON.stringify(products));
-    localStorage.setItem('gea_current_myus_v4', JSON.stringify(myusConfig));
-    localStorage.setItem('gea_current_customs_v4', JSON.stringify(customsConfig));
-    localStorage.setItem('gea_current_proration_v4', JSON.stringify(customProration));
+    localStorage.setItem('gea_current_products_v5', JSON.stringify(products));
+    localStorage.setItem('gea_current_myus_v5', JSON.stringify(myusConfig));
+    localStorage.setItem('gea_current_customs_v5', JSON.stringify(customsConfig));
+    localStorage.setItem('gea_current_proration_v5', JSON.stringify(customProration));
   }, [products, myusConfig, customsConfig, customProration]);
 
   // Persistencia de cotizaciones guardadas

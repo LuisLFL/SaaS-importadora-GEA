@@ -152,17 +152,33 @@ export const BoliviaCustomsSection: React.FC<BoliviaCustomsSectionProps> = ({
           </div>
         </div>
 
-        {/* Cargos DHL (levy + liberación de aduana) */}
+        {/* Cargos DHL: tasa base (USD) + extras reales (levy + liberación en Bs) */}
         <div className="customs-metric-card dhl-card">
           <div className="customs-card-top">
             <div className="metric-title-group">
               <Truck size={18} className="metric-icon dhl-icon" />
               <div>
                 <h4>Cargos DHL Bolivia</h4>
-                <p>Levy charges + servicio de liberación de aduana</p>
+                <p>Tasa de manejo + levy y liberación de aduana</p>
               </div>
             </div>
             <span className="dhl-badge">Courier Fee</span>
+          </div>
+
+          <div className="dhl-input-row">
+            <div className="input-with-currency large-input">
+              <span className="currency-symbol">$</span>
+              <NumericInput
+                min={0}
+                fallbackOnBlur={0}
+                allowDecimals={true}
+                value={customsConfig.dhlHandlingFeeUSD ?? 0}
+                onValueChange={(val) => onUpdateCustoms({ dhlHandlingFeeUSD: val })}
+                className="table-input"
+                placeholder="40"
+              />
+              <span className="input-unit">USD · Manejo</span>
+            </div>
           </div>
 
           <div className="dhl-input-row">
@@ -202,7 +218,7 @@ export const BoliviaCustomsSection: React.FC<BoliviaCustomsSectionProps> = ({
           </div>
 
           <div className="metric-note">
-            <span>Levvy charges y liberación de aduana cobrados por DHL, prorrateados por peso.</span>
+            <span>Tasa base de manejo (automática) + levy y liberación opcionales, prorrateados por peso.</span>
           </div>
         </div>
       </div>

@@ -702,99 +702,60 @@ export function calculateSummary(
   };
 }
 
-// Caso real calibrado con la factura de MyUS + DHL Bolivia del usuario.
-// FOB en USD equivalente a los precios pagados en eBay (a 12.20 Bs/USD):
-//   Dell 5400 i7 = 1.035,30 Bs · Dell 5420 i5 = 1.038,83 Bs
-//   Quadro K4200 = 316,69 Bs · Xeon E5-2680 = 220,74 Bs
+// Producto de ejemplo genérico (la app recalcula todo automáticamente a partir
+// de estos valores editables: peso, precio, cantidad, categoría y margen).
 export const SAMPLE_PRODUCTS: ProductItem[] = [
   {
     id: 'prod-1',
-    name: 'Dell Latitude 5400 — i7-8665U',
-    sellerOrStore: 'eBay',
+    name: 'Dispositivo Electrónico con Batería (eBay)',
+    sellerOrStore: 'eBay Top Rated Seller',
     quantity: 1,
-    unitPriceUSD: 84.8607, // 1.035,30 Bs / 12.20
-    unitWeightLbs: 4.25,
+    unitPriceUSD: 100.00,
+    unitWeightLbs: 5.0,
     packageCount: 1,
     category: 'electronics_exempt',
     gaPercent: 0,
     targetMarginPercent: 25,
     hasLithiumBattery: true
-  },
-  {
-    id: 'prod-2',
-    name: 'Dell Latitude 5420 — i5-1135G7',
-    sellerOrStore: 'eBay',
-    quantity: 1,
-    unitPriceUSD: 85.15, // 1.038,83 Bs / 12.20
-    unitWeightLbs: 4.20,
-    packageCount: 1,
-    category: 'electronics_exempt',
-    gaPercent: 0,
-    targetMarginPercent: 25,
-    hasLithiumBattery: true
-  },
-  {
-    id: 'prod-3',
-    name: 'NVIDIA Quadro K4200',
-    sellerOrStore: 'eBay',
-    quantity: 1,
-    unitPriceUSD: 25.9582, // 316,69 Bs / 12.20
-    unitWeightLbs: 1.90,
-    packageCount: 1,
-    category: 'electronics_exempt',
-    gaPercent: 0,
-    targetMarginPercent: 25,
-    hasLithiumBattery: false
-  },
-  {
-    id: 'prod-4',
-    name: 'Intel Xeon E5-2680',
-    sellerOrStore: 'eBay',
-    quantity: 1,
-    unitPriceUSD: 18.0934, // 220,74 Bs / 12.20
-    unitWeightLbs: 0.30,
-    packageCount: 1,
-    category: 'electronics_exempt',
-    gaPercent: 0,
-    targetMarginPercent: 25,
-    hasLithiumBattery: false
   }
 ];
 
-// Calibrado con la factura real de MyUS:
-//   Shipping Charges 86.22 · 15% Off -12.93 · Enhanced Liability 7.00 · Lithium 8.00 = 88.29 USD
+// Configuración MyUS por defecto en modo AUTOMÁTICO:
+// flete por peso (TruePrice por método), seguro $3.50/$100, litio automático.
 export const DEFAULT_MYUS_CONFIG: MyUSConfig = {
   membershipType: 'premium',
   shippingMethod: 'dhl_express',
-  autoCalculateShipping: false,
-  shippingChargeUSD: 86.22,
+  autoCalculateShipping: true,
+  shippingChargeUSD: 0,
 
-  discountPercent: 15, // 15% Off observado en la factura real
+  discountPercent: 0,
   discountCreditUSD: 0,
 
   insurancePer100RateUSD: 3.50,
-  useCustomShippingPreferences: true,
-  customShippingPreferencesUSD: 7.00, // Enhanced Liability Protection real
+  useCustomShippingPreferences: false,
+  customShippingPreferencesUSD: 3.50,
 
   hasPackageLevelCharges: false,
   packageLevelChargesUSD: 8.99,
 
-  hasLithiumSticker: true,
+  hasLithiumSticker: false,
   lithiumStickerUSD: 8.00,
 
   consolidationFeeUSD: 0.00,
   customFees: []
 };
 
-// Calibrado con la liquidación real de DHL Bolivia:
-//   Impuestos 468 Bs · Levy charges 360 Bs · Liberación de aduana 61 Bs = 889 Bs
+// Configuración de aduana por defecto en modo AUTOMÁTICO:
+// GA + IVA 14.94% calculados, y tasa base de manejo DHL $40.
+// (Los campos de levy/liberación y el modo manual quedan disponibles para
+// cargar una liquidación real cuando el usuario la conozca.)
 export const DEFAULT_BOLIVIA_CONFIG: BoliviaCustomsConfig = {
-  exchangeRate: 12.20, // Tipo de cambio real de la operación (1.077,14 / 88,29)
+  exchangeRate: 12.26,
   ivaRate: 14.94,
-  taxesMode: 'manual',
-  manualTaxesBOB: 468.00,
-  dhlHandlingFeeUSD: 0.00,
-  levyChargesBOB: 360.00,
-  customsReleaseFeeBOB: 61.00,
+  taxesMode: 'auto',
+  manualTaxesBOB: 0.00,
+  dhlHandlingFeeUSD: 40.00,
+  levyChargesBOB: 0.00,
+  customsReleaseFeeBOB: 0.00,
   otherCustomsFeesBOB: 0.00
 };
