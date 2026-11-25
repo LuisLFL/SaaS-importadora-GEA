@@ -40,8 +40,10 @@ export const MyUSSection: React.FC<MyUSSectionProps> = ({
   onUpdateMyUS
 }) => {
   const selectedMethod: MyUSShippingMethod = myusConfig.shippingMethod || 'dhl_smallbox';
-  // Redondeo obligatorio al próximo entero superior según norma courier de MyUS (ej. 4.75 lbs -> 5 lbs)
-  const billableWeightLbs = totalWeightLbs > 0 ? Math.max(1, Math.ceil(totalWeightLbs)) : 0;
+  // Peso facturable: peso real de la caja (actual/dimensional) si se ingresó; si no, suma redondeada.
+  const billableWeightOverride = Math.max(0, Number(myusConfig.billableWeightOverrideLbs) || 0);
+  const autoBillableWeightLbs = totalWeightLbs > 0 ? Math.max(1, Math.ceil(totalWeightLbs)) : 0;
+  const billableWeightLbs = billableWeightOverride > 0 ? Math.max(1, Math.ceil(billableWeightOverride)) : autoBillableWeightLbs;
   const allCarrierRates = getAllCarrierRates(billableWeightLbs);
   const activeMethodMeta = MYUS_SHIPPING_OPTIONS.find(o => o.id === selectedMethod) || MYUS_SHIPPING_OPTIONS[0];
 
@@ -65,8 +67,9 @@ export const MyUSSection: React.FC<MyUSSectionProps> = ({
   const totalDiscountAmount = parseFloat((discountPercentAmount + discountCreditAmount).toFixed(2));
   const netShippingCharge = parseFloat(Math.max(0, baseShippingCharge - totalDiscountAmount).toFixed(2));
 
-  // 2. Shipping Preferences (Seguro: $3.50 por cada $100 FOB)
-  const insuranceTiers = totalFobUSD > 0 ? Math.ceil(totalFobUSD / 100) : 1;
+  // 2. Shipping Preferences (Seguro: $3.50 por cada $100 del valor declarado)
+  const declaredValue = Math.max(0, Number(myusConfig.declaredValueUSD) || 0) || totalFobUSD;
+  const insuranceTiers = declaredValue > 0 ? Math.ceil(declaredValue / 100) : 1;
   const calculatedInsurance = parseFloat((insuranceTiers * (myusConfig.insurancePer100RateUSD || 3.50)).toFixed(2));
   const activePreferencesCharge = myusConfig.useCustomShippingPreferences
     ? (myusConfig.customShippingPreferencesUSD || 0)
@@ -178,6 +181,34 @@ export const MyUSSection: React.FC<MyUSSectionProps> = ({
             <p className="sub-box-desc">
               Compara las alternativas de flete oficiales según peso TruePrice™ (redondeo al entero superior), tiempos de tránsito y consolidación.
             </p>
+          </div>
+        </div>
+
+        {/* Peso facturable real de la caja (actual/dimensional) */}
+        <div className="myus-charge-row highlight-sub-row" style={{ marginBottom: '0.85rem' }}>
+          <div className="charge-left">
+            <div className="charge-title-group">
+              <Package size={16} className="text-cyan" />
+              <span className="charge-label">Peso facturable real de la caja</span>
+            </div>
+            <span className="charge-desc">
+              MyUS cobra por el peso actual/dimensional de la caja consolidada, no por la suma de productos ({totalWeightLbs.toFixed(2)} lbs). Déjalo en 0 para usar la suma redondeada ({autoBillableWeightLbs} lbs).
+            </span>
+          </div>
+          <div className="charge-right">
+            <div className="input-with-currency small-pill-input">
+              <span className="currency-symbol">lb</span>
+              <NumericInput
+                min={0}
+                fallbackOnBlur={0}
+                allowDecimals={true}
+                value={myusConfig.billableWeightOverrideLbs || 0}
+                onValueChange={(val) => onUpdateMyUS({ billableWeightOverrideLbs: val })}
+                className="table-input price-input text-right"
+                placeholder={`0 = ${autoBillableWeightLbs}`}
+              />
+              <span className="unit-symbol">lbs</span>
+            </div>
           </div>
         </div>
 
@@ -562,7 +593,7 @@ export const MyUSSection: React.FC<MyUSSectionProps> = ({
                 <span className="charge-label">Shipping Preferences (Seguro de Envío)</span>
               </div>
               <span className="charge-desc">
-                $3.50 USD por cada $100 USD de producto (FOB Total: {formatUSD(totalFobUSD)} → {insuranceTiers} tramo{insuranceTiers > 1 ? 's' : ''})
+                $3.50 USD por cada $100 del valor declarado ({formatUSD(declaredValue)} → {insuranceTiers} tramo{insuranceTiers > 1 ? 's' : ''})
               </span>
             </div>
 
@@ -582,6 +613,34 @@ export const MyUSSection: React.FC<MyUSSectionProps> = ({
                   }}
                   className="table-input price-input text-right"
                   placeholder="0.00"
+                />
+                <span className="unit-symbol">USD</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 2.1 Valor declarado para el seguro (puede diferir del FOB pagado) */}
+          <div className="myus-charge-row sub-config-row">
+            <div className="charge-left">
+              <div className="charge-title-group">
+                <ShieldCheck size={15} className="text-muted" />
+                <span className="charge-label">Valor declarado para el seguro</span>
+              </div>
+              <span className="charge-desc">
+                MyUS asegura sobre el valor declarado, que puede ser menor al FOB pagado. 0 = usar el FOB total ({formatUSD(totalFobUSD)}).
+              </span>
+            </div>
+            <div className="charge-right">
+              <div className="input-with-currency small-pill-input">
+                <span className="currency-symbol">$</span>
+                <NumericInput
+                  min={0}
+                  fallbackOnBlur={0}
+                  allowDecimals={true}
+                  value={myusConfig.declaredValueUSD || 0}
+                  onValueChange={(val) => onUpdateMyUS({ declaredValueUSD: val })}
+                  className="table-input price-input text-right"
+                  placeholder="0 = FOB"
                 />
                 <span className="unit-symbol">USD</span>
               </div>

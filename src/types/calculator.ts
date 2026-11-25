@@ -26,6 +26,10 @@ export interface MyUSConfig {
   shippingMethod: MyUSShippingMethod; // 'dhl_smallbox' | 'dhl_express' | 'budget_economy' | 'ups_expedited'
   autoCalculateShipping: boolean; // Extrapolación de TruePrice™
   shippingChargeUSD: number; // Tarifa de flete base por peso (o manual)
+  // Peso facturable real de la caja (actual/dimensional). MyUS cobra por el peso
+  // de la caja consolidada, que suele superar la suma de pesos de los productos.
+  // 0 = usar automáticamente la suma de pesos de los productos (redondeada).
+  billableWeightOverrideLbs: number;
   
   // Descuentos en flete MyUS
   discountPercent: number; // Descuento porcentual (ej. 15% o 20% OFF de membresía/tarjeta/cupón)
@@ -33,6 +37,9 @@ export interface MyUSConfig {
   
   // Shipping Preferences: Seguro ($3.50 por cada $100 de producto)
   insurancePer100RateUSD: number; // $3.50
+  // Valor declarado para el seguro. MyUS asegura sobre el valor declarado, que
+  // puede ser menor al precio pagado (FOB). 0 = usar el FOB total.
+  declaredValueUSD: number;
   useCustomShippingPreferences: boolean;
   customShippingPreferencesUSD: number;
   

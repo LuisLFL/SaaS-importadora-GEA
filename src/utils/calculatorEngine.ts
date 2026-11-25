@@ -237,8 +237,13 @@ export function calculateSummary(
   const totalPackagesCount = products.reduce((acc, p) => acc + (p.packageCount || 1), 0);
   const totalFobUSD = products.reduce((acc, p) => acc + (effQty(p) * (Number(p.unitPriceUSD) || 0)), 0);
   const totalWeightLbs = products.reduce((acc, p) => acc + (effQty(p) * (Number(p.unitWeightLbs) || 0)), 0);
-  // Peso facturable MyUS: embarque consolidado, redondeado al lb superior.
-  const billableWeightLbs = totalWeightLbs > 0 ? Math.max(1, Math.ceil(totalWeightLbs)) : 0;
+  // Peso facturable MyUS: MyUS cobra por el peso REAL de la caja consolidada
+  // (actual/dimensional), que suele superar la suma de pesos de los productos.
+  // Si se ingresa un peso facturable real, se usa ése; si no, la suma redondeada.
+  const billableWeightOverride = Math.max(0, Number(myus.billableWeightOverrideLbs) || 0);
+  const billableWeightLbs = billableWeightOverride > 0
+    ? Math.max(1, Math.ceil(billableWeightOverride))
+    : (totalWeightLbs > 0 ? Math.max(1, Math.ceil(totalWeightLbs)) : 0);
   const totalWeightKg = totalWeightLbs * LBS_TO_KG;
 
   const currentMethod: MyUSShippingMethod = myus.shippingMethod || 'dhl_smallbox';
@@ -271,8 +276,10 @@ export function calculateSummary(
   if (myus.useCustomShippingPreferences) {
     myusShippingPreferencesUSD = Math.max(0, Number(myus.customShippingPreferencesUSD) || 0);
   } else {
-    // Cálculo oficial: $3.50 por cada tramo de $100 FOB
-    const tiers = totalFobUSD > 0 ? Math.ceil(totalFobUSD / 100) : 1;
+    // Cálculo oficial: $3.50 por cada tramo de $100 del VALOR DECLARADO.
+    // MyUS asegura sobre el valor declarado, que puede ser menor al FOB pagado.
+    const declaredValueUSD = Math.max(0, Number(myus.declaredValueUSD) || 0) || totalFobUSD;
+    const tiers = declaredValueUSD > 0 ? Math.ceil(declaredValueUSD / 100) : 1;
     myusShippingPreferencesUSD = parseFloat((tiers * (Number(myus.insurancePer100RateUSD) || 3.50)).toFixed(2));
   }
 
@@ -758,11 +765,13 @@ export const DEFAULT_MYUS_CONFIG: MyUSConfig = {
   shippingMethod: 'dhl_express',
   autoCalculateShipping: true,
   shippingChargeUSD: 0,
+  billableWeightOverrideLbs: 0,
 
   discountPercent: 0,
   discountCreditUSD: 0,
 
   insurancePer100RateUSD: 3.50,
+  declaredValueUSD: 0,
   useCustomShippingPreferences: false,
   customShippingPreferencesUSD: 3.50,
 
