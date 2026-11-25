@@ -132,7 +132,7 @@ export const MYUS_SHIPPING_OPTIONS: MyUSShippingOptionMeta[] = [
  * Cálculo y extrapolación de tarifas de flete internacional MyUS TruePrice™ a Bolivia
  * Calibradas exactamente con las capturas de pantalla oficiales de MyUS:
  * - 5 lbs:  DHL Smallbox = $31.14 USD  |  DHL Express = $38.13 USD
- * - 10 lbs: DHL Smallbox = $65.35 USD  |  DHL Express = $74.27 USD
+ * - 10 lbs: DHL Smallbox = $66.33 USD  |  DHL Express = $75.39 USD  |  Budget Economy = $75.13 USD  |  UPS Expedited = $85.03 USD
  * - 15 lbs: DHL Smallbox = $91.21 USD  |  Budget Economy = $101.24 USD  |  DHL Express = $107.35 USD  |  UPS Expedited = $119.39 USD
  */
 export function calculateCarrierRate(method: MyUSShippingMethod, lbs: number): number {
@@ -143,63 +143,63 @@ export function calculateCarrierRate(method: MyUSShippingMethod, lbs: number): n
 
   switch (method) {
     case 'dhl_smallbox': {
-      // 5 lbs: $31.14 | 10 lbs: $65.35 | 15 lbs: $91.21
+      // 5 lbs: $31.14 | 10 lbs: $66.33 | 15 lbs: $91.21
       if (billableLbs <= 1) return 15.50;
       if (billableLbs <= 5) {
         return parseFloat((15.50 + (billableLbs - 1) * ((31.14 - 15.50) / 4)).toFixed(2));
       }
       if (billableLbs <= 10) {
-        return parseFloat((31.14 + (billableLbs - 5) * ((65.35 - 31.14) / 5)).toFixed(2));
+        return parseFloat((31.14 + (billableLbs - 5) * ((66.33 - 31.14) / 5)).toFixed(2));
       }
       if (billableLbs <= 15) {
-        return parseFloat((65.35 + (billableLbs - 10) * ((91.21 - 65.35) / 5)).toFixed(2));
+        return parseFloat((66.33 + (billableLbs - 10) * ((91.21 - 66.33) / 5)).toFixed(2));
       }
       // > 15 lbs: Aunque Smallbox no permite >15 lbs, extrapolamos a la tasa marginal
       return parseFloat((91.21 + (billableLbs - 15) * 5.172).toFixed(2));
     }
 
     case 'dhl_express': {
-      // 5 lbs: $38.13 | 10 lbs: $74.27 | 15 lbs: $107.35
+      // 5 lbs: $38.13 | 10 lbs: $75.39 | 15 lbs: $107.35
       if (billableLbs <= 1) return 19.50;
       if (billableLbs <= 5) {
         return parseFloat((19.50 + (billableLbs - 1) * ((38.13 - 19.50) / 4)).toFixed(2));
       }
       if (billableLbs <= 10) {
-        return parseFloat((38.13 + (billableLbs - 5) * ((74.27 - 38.13) / 5)).toFixed(2));
+        return parseFloat((38.13 + (billableLbs - 5) * ((75.39 - 38.13) / 5)).toFixed(2));
       }
       if (billableLbs <= 15) {
-        return parseFloat((74.27 + (billableLbs - 10) * ((107.35 - 74.27) / 5)).toFixed(2));
+        return parseFloat((75.39 + (billableLbs - 10) * ((107.35 - 75.39) / 5)).toFixed(2));
       }
       // > 15 lbs: extrapolación continua basada en ~$6.616 USD / lb
       return parseFloat((107.35 + (billableLbs - 15) * 6.616).toFixed(2));
     }
 
     case 'budget_economy': {
-      // 15 lbs: $101.24 USD
+      // 10 lbs: $75.13 USD | 15 lbs: $101.24 USD
       if (billableLbs <= 1) return 18.50;
       if (billableLbs <= 5) {
         return parseFloat((18.50 + (billableLbs - 1) * ((36.20 - 18.50) / 4)).toFixed(2));
       }
       if (billableLbs <= 10) {
-        return parseFloat((36.20 + (billableLbs - 5) * ((69.80 - 36.20) / 5)).toFixed(2));
+        return parseFloat((36.20 + (billableLbs - 5) * ((75.13 - 36.20) / 5)).toFixed(2));
       }
       if (billableLbs <= 15) {
-        return parseFloat((69.80 + (billableLbs - 10) * ((101.24 - 69.80) / 5)).toFixed(2));
+        return parseFloat((75.13 + (billableLbs - 10) * ((101.24 - 75.13) / 5)).toFixed(2));
       }
       return parseFloat((101.24 + (billableLbs - 15) * 6.288).toFixed(2));
     }
 
     case 'ups_expedited': {
-      // 15 lbs: $119.39 USD
+      // 10 lbs: $85.03 USD | 15 lbs: $119.39 USD
       if (billableLbs <= 1) return 22.00;
       if (billableLbs <= 5) {
         return parseFloat((22.00 + (billableLbs - 1) * ((44.10 - 22.00) / 4)).toFixed(2));
       }
       if (billableLbs <= 10) {
-        return parseFloat((44.10 + (billableLbs - 5) * ((81.75 - 44.10) / 5)).toFixed(2));
+        return parseFloat((44.10 + (billableLbs - 5) * ((85.03 - 44.10) / 5)).toFixed(2));
       }
       if (billableLbs <= 15) {
-        return parseFloat((81.75 + (billableLbs - 10) * ((119.39 - 81.75) / 5)).toFixed(2));
+        return parseFloat((85.03 + (billableLbs - 10) * ((119.39 - 85.03) / 5)).toFixed(2));
       }
       return parseFloat((119.39 + (billableLbs - 15) * 7.528).toFixed(2));
     }
@@ -232,11 +232,12 @@ export function calculateSummary(
   customs: BoliviaCustomsConfig,
   customProration?: CustomProrationOverrides
 ): CalculationSummary {
-  const totalItemsCount = products.reduce((acc, p) => acc + (Number(p.quantity) || 0), 0);
+  const effQty = (p: ProductItem) => Math.max(1, Math.round(Number(p.quantity) || 1));
+  const totalItemsCount = products.reduce((acc, p) => acc + effQty(p), 0);
   const totalPackagesCount = products.reduce((acc, p) => acc + (p.packageCount || 1), 0);
-  const totalFobUSD = products.reduce((acc, p) => acc + ((Number(p.quantity) || 0) * (Number(p.unitPriceUSD) || 0)), 0);
-  const totalWeightLbs = products.reduce((acc, p) => acc + ((Number(p.quantity) || 0) * (Number(p.unitWeightLbs) || 0)), 0);
-  // Redondeo al entero superior para facturación MyUS
+  const totalFobUSD = products.reduce((acc, p) => acc + (effQty(p) * (Number(p.unitPriceUSD) || 0)), 0);
+  const totalWeightLbs = products.reduce((acc, p) => acc + (effQty(p) * (Number(p.unitWeightLbs) || 0)), 0);
+  // Peso facturable MyUS: embarque consolidado, redondeado al lb superior.
   const billableWeightLbs = totalWeightLbs > 0 ? Math.max(1, Math.ceil(totalWeightLbs)) : 0;
   const totalWeightKg = totalWeightLbs * LBS_TO_KG;
 
@@ -302,15 +303,15 @@ export function calculateSummary(
   // Base Imponible CIF en Bolivia = Compra en eBay (FOB) + Total MyUS
   const cifBaseUSD = totalFobUSD + totalMyUSUSD;
 
-  const customsRate = Number(customs.exchangeRate) || 12.20;
+  const rate = Number(customs.exchangeRate) || 12.26;
   // Cargos DHL: tasa base de manejo + levy + liberación de aduana, todos en Bs,
   // convertidos a USD con el tipo de cambio vigente.
   const dhlBaseBOB = Math.max(0, Number(customs.dhlHandlingFeeBOB) || 0);
   const dhlTotalBOB = dhlBaseBOB +
     Math.max(0, Number(customs.levyChargesBOB) || 0) +
     Math.max(0, Number(customs.customsReleaseFeeBOB) || 0);
-  const dhlHandlingUSD = parseFloat((dhlTotalBOB / customsRate).toFixed(2));
-  const otherFeesUSD = (Number(customs.otherCustomsFeesBOB) || 0) / customsRate;
+  const dhlHandlingUSD = parseFloat((dhlTotalBOB / rate).toFixed(2));
+  const otherFeesUSD = (Number(customs.otherCustomsFeesBOB) || 0) / rate;
 
   // =========================================================================
   // 1. CÁLCULO BASE INDIVIDUAL DE CADA PRODUCTO (PRORRATEO MIXTO ESTÁNDAR)
@@ -323,6 +324,7 @@ export function calculateSummary(
     itemFobSubtotal: number;
     itemTotalWeightLbs: number;
     itemTotalWeightKg: number;
+    itemBillableWeightLbs: number;
     weightRatio: number;
     valueRatio: number;
     proratedFreightUSD: number;
@@ -345,8 +347,12 @@ export function calculateSummary(
     const itemFobSubtotal = itemTotalQty * itemUnitPrice;
     const itemTotalWeightLbs = itemTotalQty * itemUnitWeight;
     const itemTotalWeightKg = itemTotalWeightLbs * LBS_TO_KG;
+    // Peso de manejo redondeado al lb superior por producto (informativo)
+    const itemBillableWeightLbs = Math.ceil(itemTotalWeightLbs);
 
-    const weightRatio = totalWeightLbs > 0 ? (itemTotalWeightLbs / totalWeightLbs) : (products.length > 0 ? 1 / products.length : 0);
+    const weightRatio = totalWeightLbs > 0
+      ? (itemTotalWeightLbs / totalWeightLbs)
+      : (products.length > 0 ? 1 / products.length : 0);
     const valueRatio = totalFobUSD > 0 ? (itemFobSubtotal / totalFobUSD) : (products.length > 0 ? 1 / products.length : 0);
 
     // Flete internacional MyUS: por peso físico (lbs en avión)
@@ -403,6 +409,7 @@ export function calculateSummary(
       itemFobSubtotal,
       itemTotalWeightLbs,
       itemTotalWeightKg,
+      itemBillableWeightLbs,
       weightRatio,
       valueRatio,
       proratedFreightUSD,
@@ -428,7 +435,7 @@ export function calculateSummary(
   const taxesMode = customs.taxesMode || 'manual';
   if (taxesMode === 'manual') {
     const totalCifBase = baseItems.reduce((acc, b) => acc + b.itemCifUSD, 0);
-    const targetTaxUSD = Math.max(0, Number(customs.manualTaxesBOB) || 0) / customsRate;
+    const targetTaxUSD = Math.max(0, Number(customs.manualTaxesBOB) || 0) / rate;
     baseItems.forEach((b) => {
       const share = totalCifBase > 0
         ? b.itemCifUSD / totalCifBase
@@ -441,11 +448,15 @@ export function calculateSummary(
   }
 
   // =========================================================================
-  // 2. REDISTRIBUCIÓN DINÁMICA DE COSTOS (ACTIVABLE SOLO CON 2 O MÁS ARTÍCULOS)
+  // 2. REDISTRIBUCIÓN DINÁMICA DE COSTOS
+  //    - 2+ artículos: los valores manuales se redistribuyen conservando el total.
+  //    - 1 solo artículo: el valor manual se aplica directo (fija el valor real pagado).
   // =========================================================================
   const canRedistribute = products.length >= 2;
-  const manualTaxes = (canRedistribute && customProration?.manualUnitTaxes) ? customProration.manualUnitTaxes : {};
-  const manualDhl = (canRedistribute && customProration?.manualUnitDhl) ? customProration.manualUnitDhl : {};
+  const canOverrideSingle = products.length === 1;
+  const canUseOverrides = canRedistribute || canOverrideSingle;
+  const manualTaxes = (canUseOverrides && customProration?.manualUnitTaxes) ? customProration.manualUnitTaxes : {};
+  const manualDhl = (canUseOverrides && customProration?.manualUnitDhl) ? customProration.manualUnitDhl : {};
 
   const validTaxOverrideIds = new Set(
     products.filter(p => manualTaxes[p.id] !== undefined && manualTaxes[p.id] !== null).map(p => p.id)
@@ -507,6 +518,12 @@ export function calculateSummary(
       }
       isDhlCustomMap[p.id] = false;
     });
+  } else if (hasAnyDhlCustom && canOverrideSingle) {
+    // Un solo artículo: el valor manual es el valor real pagado (sin tope de fondo).
+    const p = products[0];
+    const qty = Math.max(1, Number(p.quantity) || 1);
+    finalDhlUSDMap[p.id] = Math.max(0, Number(manualDhl[p.id]) || 0) * qty;
+    isDhlCustomMap[p.id] = true;
   } else {
     baseItems.forEach(b => {
       finalDhlUSDMap[b.item.id] = b.baseDhlUSD;
@@ -562,6 +579,12 @@ export function calculateSummary(
       }
       isTaxCustomMap[p.id] = false;
     });
+  } else if (hasAnyTaxCustom && canOverrideSingle) {
+    // Un solo artículo: el impuesto manual es el monto real pagado (sin tope).
+    const p = products[0];
+    const qty = Math.max(1, Number(p.quantity) || 1);
+    finalTaxUSDMap[p.id] = Math.max(0, Number(manualTaxes[p.id]) || 0) * qty;
+    isTaxCustomMap[p.id] = true;
   } else {
     baseItems.forEach(b => {
       finalTaxUSDMap[b.item.id] = b.baseTaxUSD;
@@ -597,7 +620,6 @@ export function calculateSummary(
     const unitLandedCostUSD = b.itemTotalQty > 0 ? totalLandedCostUSD / b.itemTotalQty : 0;
 
     // Conversión a Bs.
-    const rate = customs.exchangeRate || 12.26;
     const totalLandedCostBOB = totalLandedCostUSD * rate;
     const unitLandedCostBOB = unitLandedCostUSD * rate;
 
@@ -615,6 +637,7 @@ export function calculateSummary(
       item: b.item,
       totalWeightLbs: b.itemTotalWeightLbs,
       totalWeightKg: b.itemTotalWeightKg,
+      billableWeightLbs: b.itemBillableWeightLbs,
       totalFobUSD: b.itemFobSubtotal,
       fobWeightRatio: b.weightRatio * 100,
       fobValueRatio: b.valueRatio * 100,
@@ -640,12 +663,19 @@ export function calculateSummary(
     };
   });
 
+  // Total DHL efectivo = suma del prorrateo final (respeta overrides manuales).
+  // Con 2+ artículos coincide con el fondo configurado; con 1 artículo refleja el
+  // valor real ingresado manualmente.
+  const effectiveDhlHandlingUSD = products.reduce(
+    (acc, p) => acc + (finalDhlUSDMap[p.id] ?? 0),
+    0
+  );
+
   const totalCustomsTaxesUSD = totalGaUSD + totalIvaUSD;
-  const totalLandedCostUSD = totalFobUSD + totalMyUSUSD + totalCustomsTaxesUSD + dhlHandlingUSD + otherFeesUSD;
-  const rate = Number(customs.exchangeRate) || 12.26;
+  const totalLandedCostUSD = totalFobUSD + totalMyUSUSD + totalCustomsTaxesUSD + effectiveDhlHandlingUSD + otherFeesUSD;
   const totalLandedCostBOB = totalLandedCostUSD * rate;
 
-  const logisticsCostUSD = totalMyUSUSD + dhlHandlingUSD;
+  const logisticsCostUSD = totalMyUSUSD + effectiveDhlHandlingUSD;
   const logisticsPercentOverFob = totalFobUSD > 0 ? (logisticsCostUSD / totalFobUSD) * 100 : 0;
   const taxesPercentOverFob = totalFobUSD > 0 ? (totalCustomsTaxesUSD / totalFobUSD) * 100 : 0;
   const totalCostMultiplier = totalFobUSD > 0 ? (totalLandedCostUSD / totalFobUSD) : 1;
@@ -683,7 +713,7 @@ export function calculateSummary(
     totalGaUSD,
     totalIvaUSD,
     totalCustomsTaxesUSD,
-    dhlHandlingUSD,
+    dhlHandlingUSD: effectiveDhlHandlingUSD,
     otherFeesUSD,
     totalLandedCostUSD,
     totalLandedCostBOB,

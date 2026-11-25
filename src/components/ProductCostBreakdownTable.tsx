@@ -50,11 +50,12 @@ export const ProductCostBreakdownTable: React.FC<ProductCostBreakdownTableProps>
   totalDhlHandlingUSD = 40
 }) => {
   const canRedistribute = products.length >= 2;
+  const canEditCosts = products.length >= 1;
   const manualTaxes = customProration?.manualUnitTaxes || {};
   const manualDhl = customProration?.manualUnitDhl || {};
   const hasTaxOverrides = Object.keys(manualTaxes).length > 0;
   const hasDhlOverrides = Object.keys(manualDhl).length > 0;
-  const hasAnyOverrides = canRedistribute && (hasTaxOverrides || hasDhlOverrides);
+  const hasAnyOverrides = canEditCosts && (hasTaxOverrides || hasDhlOverrides);
 
   // Excluidos
   const excludedItems = allProducts.filter(p => !!p.isExcluded);
@@ -167,15 +168,14 @@ export const ProductCostBreakdownTable: React.FC<ProductCostBreakdownTableProps>
               <th style={{ width: '13%' }}>
                 <div className="th-cell-header">
                   <span>Impuestos Bo</span>
-                  {canRedistribute ? (
-                    <span className="th-badge-editable" title="Columna editable: al modificar un artículo, el saldo se redistribuye entre los demás conservando el total.">
-                      <SlidersHorizontal size={10} /> Ajustable
-                    </span>
-                  ) : (
-                    <span className="th-badge-locked" title="Requiere 2 o más artículos para redistribución">
-                      <Lock size={10} /> 1 art.
-                    </span>
-                  )}
+                  <span
+                    className="th-badge-editable"
+                    title={canRedistribute
+                      ? "Columna editable: al modificar un artículo, el saldo se redistribuye entre los demás conservando el total."
+                      : "Editable: fija el impuesto real pagado de este artículo."}
+                  >
+                    <SlidersHorizontal size={10} /> Ajustable
+                  </span>
                 </div>
               </th>
 
@@ -183,15 +183,14 @@ export const ProductCostBreakdownTable: React.FC<ProductCostBreakdownTableProps>
               <th style={{ width: '12%' }}>
                 <div className="th-cell-header">
                   <span>DHL (${totalDhlHandlingUSD.toFixed(0)})</span>
-                  {canRedistribute ? (
-                    <span className="th-badge-editable" title="Prorrateado por peso físico (lbs). Editable: al modificar un artículo, el saldo se redistribuye entre los demás conservando los $40 exactos.">
-                      <SlidersHorizontal size={10} /> Peso (Ajust.)
-                    </span>
-                  ) : (
-                    <span className="th-badge-locked" title="Prorrateado por peso físico (lbs). Requiere 2 o más artículos para redistribución">
-                      <Lock size={10} /> Peso
-                    </span>
-                  )}
+                  <span
+                    className="th-badge-editable"
+                    title={canRedistribute
+                      ? "Prorrateado por peso físico (lbs). Editable: al modificar un artículo, el saldo se redistribuye entre los demás conservando el total."
+                      : "Prorrateado por peso físico (lbs). Editable: fija el valor real pagado de este artículo."}
+                  >
+                    <SlidersHorizontal size={10} /> Peso (Ajust.)
+                  </span>
                 </div>
               </th>
 
@@ -321,7 +320,7 @@ export const ProductCostBreakdownTable: React.FC<ProductCostBreakdownTableProps>
 
                   {/* Impuestos BO (GA + IVA): Editable con redistribución automática */}
                   <td>
-                    {canRedistribute ? (
+                    {canEditCosts ? (
                       <div className={`sub-cost-cell editable-table-cell ${isTaxCustom ? 'is-custom' : hasTaxOverrides ? 'is-redistributed' : ''}`}>
                         <div className="cost-input-wrapper">
                           <span className="cost-currency-prefix">$</span>
@@ -329,7 +328,7 @@ export const ProductCostBreakdownTable: React.FC<ProductCostBreakdownTableProps>
                             value={parseFloat(taxesPerUnit.toFixed(2))}
                             onValueChange={(val) => onUpdateTaxOverride?.(calc.item.id, val)}
                             min={0}
-                            max={maxTaxPerUnit}
+                            max={canRedistribute ? maxTaxPerUnit : undefined}
                             className={`table-cost-input ${isTaxCustom ? 'custom-input' : ''}`}
                             title={isTaxCustom ? "Valor personalizado manualmente" : "Valor calculado o redistribuido automáticamente"}
                           />
@@ -365,9 +364,9 @@ export const ProductCostBreakdownTable: React.FC<ProductCostBreakdownTableProps>
                     )}
                   </td>
 
-                  {/* DHL ($40 s/ Peso): Editable con redistribución automática */}
+                  {/* DHL (por peso): Editable con redistribución automática */}
                   <td>
-                    {canRedistribute ? (
+                    {canEditCosts ? (
                       <div className={`sub-cost-cell editable-table-cell ${isDhlCustom ? 'is-custom' : hasDhlOverrides ? 'is-redistributed' : ''}`}>
                         <div className="cost-input-wrapper">
                           <span className="cost-currency-prefix">$</span>
@@ -375,7 +374,7 @@ export const ProductCostBreakdownTable: React.FC<ProductCostBreakdownTableProps>
                             value={parseFloat(dhlPerUnit.toFixed(2))}
                             onValueChange={(val) => onUpdateDhlOverride?.(calc.item.id, val)}
                             min={0}
-                            max={maxDhlPerUnit}
+                            max={canRedistribute ? maxDhlPerUnit : undefined}
                             className={`table-cost-input ${isDhlCustom ? 'custom-input' : ''}`}
                             title={isDhlCustom ? "Valor personalizado manualmente" : "Valor prorrateado por peso físico o redistribuido automáticamente"}
                           />
@@ -478,7 +477,7 @@ export const ProductCostBreakdownTable: React.FC<ProductCostBreakdownTableProps>
             <div className="status-chip single-item">
               <Info size={15} className="text-muted" />
               <span>
-                La redistribución dinámica de costos se activará automáticamente cuando haya <strong>2 o más artículos activos</strong>.
+                <strong>Artículo único:</strong> puedes editar <strong>Impuestos Bo</strong> o <strong>DHL</strong> para fijar el valor real pagado; el total se ajusta directamente (sin redistribución).
               </span>
             </div>
           )}
@@ -502,7 +501,7 @@ export const ProductCostBreakdownTable: React.FC<ProductCostBreakdownTableProps>
         <div className="footer-legend-item">
           <Scale size={14} className="text-accent" />
           <span>
-            <strong>Prorrateo Mixto Inteligente:</strong> El Flete Courier y la Tasa fija de DHL ($40) se distribuyen por <strong>Peso físico (lbs)</strong> (manejo y manipulación logística real), mientras que el Seguro MyUS y los Impuestos se calculan sobre <strong>Valor comercial FOB / CIF ($)</strong>.
+            <strong>Prorrateo Mixto Inteligente:</strong> El Flete Courier y los Cargos DHL se distribuyen por <strong>Peso físico (lbs)</strong> (manejo y manipulación logística real), mientras que el Seguro MyUS y los Impuestos se calculan sobre <strong>Valor comercial FOB / CIF ($)</strong>.
           </span>
         </div>
         <div className="footer-legend-item">

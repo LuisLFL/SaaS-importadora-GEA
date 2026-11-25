@@ -65,6 +65,7 @@ export interface ProductCalculated {
   item: ProductItem;
   totalWeightLbs: number;
   totalWeightKg: number;
+  billableWeightLbs: number;
   totalFobUSD: number;
   fobWeightRatio: number;
   fobValueRatio: number;
