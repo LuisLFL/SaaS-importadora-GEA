@@ -25,6 +25,7 @@ import { NumericInput } from './NumericInput';
 interface MyUSSectionProps {
   myusConfig: MyUSConfig;
   totalWeightLbs: number;
+  billableWeightLbs: number;
   totalFobUSD: number;
   exchangeRate: number;
   totalPackagesCount?: number;
@@ -34,16 +35,15 @@ interface MyUSSectionProps {
 export const MyUSSection: React.FC<MyUSSectionProps> = ({
   myusConfig,
   totalWeightLbs,
+  billableWeightLbs,
   totalFobUSD,
   exchangeRate,
   totalPackagesCount = 1,
   onUpdateMyUS
 }) => {
   const selectedMethod: MyUSShippingMethod = myusConfig.shippingMethod || 'dhl_smallbox';
-  // Peso facturable: peso real de la caja (actual/dimensional) si se ingresó; si no, suma redondeada.
-  const billableWeightOverride = Math.max(0, Number(myusConfig.billableWeightOverrideLbs) || 0);
-  const autoBillableWeightLbs = totalWeightLbs > 0 ? Math.max(1, Math.ceil(totalWeightLbs)) : 0;
-  const billableWeightLbs = billableWeightOverride > 0 ? Math.max(1, Math.ceil(billableWeightOverride)) : autoBillableWeightLbs;
+  // billableWeightLbs viene calculado por el motor: respeta el peso facturable real
+  // (si se ingresó) o el redondeo al alza por bulto.
   const allCarrierRates = getAllCarrierRates(billableWeightLbs);
   const activeMethodMeta = MYUS_SHIPPING_OPTIONS.find(o => o.id === selectedMethod) || MYUS_SHIPPING_OPTIONS[0];
 
@@ -192,7 +192,7 @@ export const MyUSSection: React.FC<MyUSSectionProps> = ({
               <span className="charge-label">Peso facturable real de la caja</span>
             </div>
             <span className="charge-desc">
-              MyUS cobra por el peso actual/dimensional de la caja consolidada, no por la suma de productos ({totalWeightLbs.toFixed(2)} lbs). Déjalo en 0 para usar la suma redondeada ({autoBillableWeightLbs} lbs).
+              MyUS redondea al alza el peso de cada bulto y los suma; también puede cobrar el peso actual/dimensional de la caja. Déjalo en 0 para el cálculo automático (actual: {billableWeightLbs} lbs) o ingresa el peso facturable real de la factura.
             </span>
           </div>
           <div className="charge-right">
@@ -205,7 +205,7 @@ export const MyUSSection: React.FC<MyUSSectionProps> = ({
                 value={myusConfig.billableWeightOverrideLbs || 0}
                 onValueChange={(val) => onUpdateMyUS({ billableWeightOverrideLbs: val })}
                 className="table-input price-input text-right"
-                placeholder={`0 = ${autoBillableWeightLbs}`}
+                placeholder={`0 = ${billableWeightLbs}`}
               />
               <span className="unit-symbol">lbs</span>
             </div>

@@ -237,13 +237,18 @@ export function calculateSummary(
   const totalPackagesCount = products.reduce((acc, p) => acc + (p.packageCount || 1), 0);
   const totalFobUSD = products.reduce((acc, p) => acc + (effQty(p) * (Number(p.unitPriceUSD) || 0)), 0);
   const totalWeightLbs = products.reduce((acc, p) => acc + (effQty(p) * (Number(p.unitWeightLbs) || 0)), 0);
-  // Peso facturable MyUS: MyUS cobra por el peso REAL de la caja consolidada
-  // (actual/dimensional), que suele superar la suma de pesos de los productos.
-  // Si se ingresa un peso facturable real, se usa ése; si no, la suma redondeada.
+  // Peso facturable MyUS: MyUS redondea AL ALZA el peso de cada bulto (9.1 lb -> 10 lb)
+  // y luego los suma. Por eso no es simplemente ceil(suma de pesos): cada bulto
+  // aporta su propio tramo entero. Si se ingresa un peso facturable real (caja
+  // actual/dimensional de la factura), se usa ése con prioridad.
+  const autoBillableWeightLbs = products.reduce(
+    (acc, p) => acc + Math.ceil((Number(p.unitWeightLbs) || 0) * effQty(p)),
+    0
+  );
   const billableWeightOverride = Math.max(0, Number(myus.billableWeightOverrideLbs) || 0);
   const billableWeightLbs = billableWeightOverride > 0
     ? Math.max(1, Math.ceil(billableWeightOverride))
-    : (totalWeightLbs > 0 ? Math.max(1, Math.ceil(totalWeightLbs)) : 0);
+    : (totalWeightLbs > 0 ? Math.max(1, autoBillableWeightLbs) : 0);
   const totalWeightKg = totalWeightLbs * LBS_TO_KG;
 
   const currentMethod: MyUSShippingMethod = myus.shippingMethod || 'dhl_smallbox';
@@ -793,8 +798,11 @@ export const DEFAULT_BOLIVIA_CONFIG: BoliviaCustomsConfig = {
   ivaRate: 14.94,
   taxesMode: 'auto',
   manualTaxesBOB: 0.00,
+  // Cargos DHL nominales por defecto: ~$40 USD (490,40 Bs a 12,26), divididos
+  // como en el ejemplo real: levy 360 / liberación 61 (proporción 360:61).
+  // Modificables en la tarjeta de aduana.
   dhlHandlingFeeBOB: 0.00,
-  levyChargesBOB: 0.00,
-  customsReleaseFeeBOB: 0.00,
+  levyChargesBOB: 419.33,
+  customsReleaseFeeBOB: 71.07,
   otherCustomsFeesBOB: 0.00
 };

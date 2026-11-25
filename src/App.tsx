@@ -45,7 +45,7 @@ export const App: React.FC = () => {
     const saved = localStorage.getItem('gea_current_myus_v6');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        return { ...DEFAULT_MYUS_CONFIG, ...JSON.parse(saved) };
       } catch (e) {
         console.error(e);
       }
@@ -58,7 +58,15 @@ export const App: React.FC = () => {
     const saved = localStorage.getItem('gea_current_customs_v6');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const merged: BoliviaCustomsConfig = { ...DEFAULT_BOLIVIA_CONFIG, ...JSON.parse(saved) };
+        // Los cargos DHL nunca deben quedar en cero: si una sesión antigua los tenía
+        // vacíos, se aplica el nominal por defecto (~$40 dividido levy/liberación).
+        const dhlAllZero = !Number(merged.dhlHandlingFeeBOB) && !Number(merged.levyChargesBOB) && !Number(merged.customsReleaseFeeBOB);
+        if (dhlAllZero) {
+          merged.levyChargesBOB = DEFAULT_BOLIVIA_CONFIG.levyChargesBOB;
+          merged.customsReleaseFeeBOB = DEFAULT_BOLIVIA_CONFIG.customsReleaseFeeBOB;
+        }
+        return merged;
       } catch (e) {
         console.error(e);
       }
@@ -355,6 +363,7 @@ export const App: React.FC = () => {
           <MyUSSection
             myusConfig={myusConfig}
             totalWeightLbs={summary.totalWeightLbs}
+            billableWeightLbs={summary.billableWeightLbs}
             totalFobUSD={summary.totalFobUSD}
             exchangeRate={customsConfig.exchangeRate}
             totalPackagesCount={summary.totalPackagesCount}
